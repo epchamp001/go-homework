@@ -17,7 +17,3 @@ logging:
 
   timestampKey: "ts"         # вместо "timestamp"
   capitalizeLevel: true      # цветной, заглавный level encoder
-
-app:
-  name: "pvz-cli"
-  shutdown_timeout: 10

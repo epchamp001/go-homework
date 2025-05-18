@@ -2,22 +2,29 @@ package cli
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
-	"pvz-cli/pkg/logger"
+	"pvz-cli/internal/handler/cli/commands"
+	"pvz-cli/internal/usecase"
 	"strings"
 )
 
-func BuildRootCommand(log logger.Logger) *cobra.Command {
+func BuildRootCommand(svc usecase.Service) *cobra.Command {
 	root := &cobra.Command{
 		Use:   "pvz",
 		Short: "Интерактивный Пункт Выдачи Заказов",
 	}
 
 	root.AddCommand(
-	// TODO вызовы функций для создания команд из cli/commands
+		commands.NewAcceptOrderCmd(svc),
+		commands.NewReturnOrderCmd(svc),
+		commands.NewProcessOrdersCmd(svc),
+		commands.NewListOrdersCmd(svc),
+		commands.NewListReturnsCmd(svc),
+		commands.NewOrderHistoryCmd(svc),
+		commands.NewScrollOrdersCmd(svc),
+		commands.NewImportOrdersCmd(svc),
 	)
 
 	return root
@@ -33,18 +40,11 @@ func NewREPL(root *cobra.Command) *REPL {
 }
 
 // Run запускает бесконечный цикл. Завершается при "exit"/EOF или ctx.Done()
-func (r *REPL) Run(ctx context.Context) error {
+func (r *REPL) Run() error {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
 		fmt.Print("> ")
-
-		select {
-		case <-ctx.Done():
-			fmt.Println("\nShutting down App …")
-			return nil
-		default:
-		}
 
 		if !scanner.Scan() {
 			return nil
@@ -59,7 +59,7 @@ func (r *REPL) Run(ctx context.Context) error {
 
 		// проксируем строку в cobra
 		r.root.SetArgs(strings.Fields(line))
-		if err := r.root.ExecuteContext(ctx); err != nil {
+		if err := r.root.Execute(); err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
 		}
 	}
