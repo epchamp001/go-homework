@@ -1,0 +1,23 @@
+logging:
+  mode: "dev"         # dev | prod
+  level: "debug"              # debug|info|warn|error|…
+  encoding: "console"           # console|json
+
+  sampling: null
+  initialFields: {}
+
+  disableCaller: true       # true = убрать caller из логов
+  disableStacktrace: true   # true = отключить stacktrace на Error+
+
+  outputPaths:
+    - "stdout"
+
+  errorOutputPaths:
+    - "stderr"
+
+  timestampKey: "ts"         # вместо "timestamp"
+  capitalizeLevel: true      # цветной, заглавный level encoder
+
+app:
+  name: "pvz-cli"
+  shutdown_timeout: 10
