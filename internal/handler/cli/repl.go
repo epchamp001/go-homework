@@ -16,6 +16,8 @@ func BuildRootCommand(svc usecase.Service) *cobra.Command {
 		Short: "Интерактивный Пункт Выдачи Заказов",
 	}
 
+	root.CompletionOptions.DisableDefaultCmd = true
+
 	root.AddCommand(
 		commands.NewAcceptOrderCmd(svc),
 		commands.NewReturnOrderCmd(svc),
