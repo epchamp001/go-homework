@@ -24,8 +24,7 @@ func New(log logger.Logger) *App {
 
 	svc := usecase.NewService(repo)
 
-	rootCmd := cli.BuildRootCommand(svc)
-	repl := cli.NewREPL(rootCmd)
+	repl := cli.NewREPL(svc)
 
 	return &App{
 		repl: repl,

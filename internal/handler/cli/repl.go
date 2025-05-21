@@ -10,35 +10,13 @@ import (
 	"strings"
 )
 
-func BuildRootCommand(svc usecase.Service) *cobra.Command {
-	root := &cobra.Command{
-		Use:   "pvz",
-		Short: "Интерактивный Пункт Выдачи Заказов",
-	}
-
-	root.CompletionOptions.DisableDefaultCmd = true
-
-	root.AddCommand(
-		commands.NewAcceptOrderCmd(svc),
-		commands.NewReturnOrderCmd(svc),
-		commands.NewProcessOrdersCmd(svc),
-		commands.NewListOrdersCmd(svc),
-		commands.NewListReturnsCmd(svc),
-		commands.NewOrderHistoryCmd(svc),
-		commands.NewScrollOrdersCmd(svc),
-		commands.NewImportOrdersCmd(svc),
-	)
-
-	return root
-}
-
 // REPL - Read, Eval, Print, Loop - прочитать, вычислить, вывести, цикл
 type REPL struct {
-	root *cobra.Command
+	svc usecase.Service
 }
 
-func NewREPL(root *cobra.Command) *REPL {
-	return &REPL{root: root}
+func NewREPL(svc usecase.Service) *REPL {
+	return &REPL{svc: svc}
 }
 
 // Run запускает бесконечный цикл. Завершается при "exit"/EOF или ctx.Done()
@@ -59,10 +37,35 @@ func (r *REPL) Run() error {
 			return nil
 		}
 
-		// проксируем строку в cobra
-		r.root.SetArgs(strings.Fields(line))
-		if err := r.root.Execute(); err != nil {
+		root := buildRootCommand(r.svc)
+
+		// парсим args и выполняем
+		args := strings.Fields(line)
+		root.SetArgs(args)
+		if err := root.Execute(); err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
 		}
 	}
+}
+
+func buildRootCommand(svc usecase.Service) *cobra.Command {
+	root := &cobra.Command{
+		Use:   "pvz",
+		Short: "Интерактивный Пункт Выдачи Заказов",
+	}
+
+	root.CompletionOptions.DisableDefaultCmd = true
+
+	root.AddCommand(
+		commands.NewAcceptOrderCmd(svc),
+		commands.NewReturnOrderCmd(svc),
+		commands.NewProcessOrdersCmd(svc),
+		commands.NewListOrdersCmd(svc),
+		commands.NewListReturnsCmd(svc),
+		commands.NewOrderHistoryCmd(svc),
+		commands.NewScrollOrdersCmd(svc),
+		commands.NewImportOrdersCmd(svc),
+	)
+
+	return root
 }
