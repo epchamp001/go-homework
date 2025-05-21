@@ -6,6 +6,7 @@ import (
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"sort"
+	"strconv"
 )
 
 func atomicWrite(path string, data any) error {
@@ -39,9 +40,27 @@ func filterOrders(src map[string]*models.Order, userID string, onlyInPVZ bool) [
 
 func sortOrdersByCreatedAt(list []*models.Order) {
 	sort.Slice(list, func(i, j int) bool {
-		if !list[i].CreatedAt.Equal(list[j].CreatedAt) {
-			return list[i].CreatedAt.Before(list[j].CreatedAt)
+		a := list[i].CreatedAt
+		b := list[j].CreatedAt
+
+		// сравниваем только Year/Month/Day
+		if a.Year() != b.Year() {
+			return a.Year() < b.Year()
 		}
+		if a.Month() != b.Month() {
+			return a.Month() < b.Month()
+		}
+		if a.Day() != b.Day() {
+			return a.Day() < b.Day()
+		}
+
+		// Парсим ID как целое и сравниваем как число
+		ai, err1 := strconv.ParseInt(list[i].ID, 10, 64)
+		bi, err2 := strconv.ParseInt(list[j].ID, 10, 64)
+		if err1 == nil && err2 == nil {
+			return ai < bi
+		}
+		// строковое сравнение, если парсинг не удался
 		return list[i].ID < list[j].ID
 	})
 }
