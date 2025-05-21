@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Logging LoggingConfig `mapstructure:"logging"`
+	App     AppConfig     `mapstructure:"app"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {

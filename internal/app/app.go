@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"pvz-cli/internal/handler/cli"
 	"pvz-cli/internal/repository/storage/filerepo"
 	"pvz-cli/internal/usecase"
@@ -32,6 +33,6 @@ func New(log logger.Logger) *App {
 	}
 }
 
-func (a *App) Run() error {
+func (a *App) Run(ctx context.Context) error {
 	return a.repl.Run()
 }
