@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/spf13/viper"
+	"path/filepath"
 	"pvz-cli/pkg/errs"
 )
 
@@ -10,9 +11,16 @@ type Config struct {
 }
 
 func LoadConfig(configPath string) (*Config, error) {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(configPath)
+
+	viper := viper.New()
+
+	// Если путь содержит расширение – явно указываем полный файл:
+	if ext := filepath.Ext(configPath); ext == ".yaml" || ext == ".yml" {
+		viper.SetConfigFile(configPath)
+	} else {
+		viper.AddConfigPath(configPath)
+		viper.SetConfigName("config")
+	}
 
 	err := viper.ReadInConfig()
 	if err != nil {
