@@ -1,0 +1,21 @@
+logging:
+  mode: "prod"         # dev | prod
+  level: "error"              # debug|info|warn|error|…
+  encoding: "console"           # console|json
+
+  sampling: null                # nil (off) или объект с Initial/Thereafter
+
+  initialFields:             # любые ключи, которые попадут в каждый лог
+    env:     "production"
+
+  disableCaller: true       # true = убрать caller из логов
+  disableStacktrace: true   # true = отключить stacktrace на Error+
+
+  outputPaths:
+    - "stdout"
+
+  errorOutputPaths:
+    - "stderr"
+
+  timestampKey: "ts"         # вместо "timestamp"
+  capitalizeLevel: true      # цветной, заглавный level encoder
