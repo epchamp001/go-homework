@@ -2,11 +2,13 @@ package commands
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/usecase"
+
+	"github.com/spf13/cobra"
 )
 
+// NewReturnOrderCmd возвращает CLI-команду `return-order`, которая оформляет возврат заказа курьеру.
 func NewReturnOrderCmd(svc usecase.Service) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "return-order",

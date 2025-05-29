@@ -1,3 +1,4 @@
+// Package usecase содержит реализацию бизнес-логики приложения.
 package usecase
 
 import (
@@ -6,24 +7,38 @@ import (
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
+	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/pkg/errs"
 	"time"
 )
 
+// Service определяет бизнес-логику работы Пункта Выдачи Заказов.
 type Service interface {
-	AcceptOrder(orderID, userID string, expires time.Time) error
+	// AcceptOrder регистрирует новый заказ и рассчитывает итоговую стоимость с учётом упаковки.
+	AcceptOrder(orderID, userID string, expires time.Time, weight float64, price models.PriceKopecks, pkgType models.PackageType) (models.PriceKopecks, error)
+
+	// ReturnOrder выполняет возврат заказа по его ID (если срок хранения истёк и не был выдан).
 	ReturnOrder(orderID string) error
 
+	// IssueOrders выполняет массовую выдачу заказов клиенту.
 	IssueOrders(userID string, ids []string) (map[string]error, error)
+
+	// ReturnOrdersByClient обрабатывает массовый возврат заказов клиентом в течение 48 часов после выдачи.
 	ReturnOrdersByClient(userID string, ids []string) (map[string]error, error)
 
+	// ListOrders возвращает заказы клиента с возможностью фильтрации, пагинации и лимита.
 	ListOrders(userID string, onlyInPVZ bool, lastN int, pg vo.Pagination) ([]*models.Order, int, error)
 
+	// ScrollOrders возвращает порцию заказов по курсору (постраничная прокрутка).
 	ScrollOrders(userID string, cursor vo.ScrollCursor) (orders []*models.Order, next vo.ScrollCursor, err error)
 
+	// ListReturns возвращает список возвратов с пагинацией.
 	ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, error)
+
+	// OrderHistory возвращает полную историю по заказам.
 	OrderHistory() ([]*models.HistoryEvent, error)
 
+	// ImportOrders импортирует заказы из JSON-файла, возвращает количество успешно добавленных.
 	ImportOrders(filePath string) (imported int, err error)
 }
 
@@ -37,26 +52,46 @@ func NewService(repo Repository) *ServiceImpl {
 	}
 }
 
-func (s *ServiceImpl) AcceptOrder(orderID, userID string, exp time.Time) error {
+func (s *ServiceImpl) AcceptOrder(orderID, userID string, exp time.Time, weight float64, price models.PriceKopecks, pkgType models.PackageType) (models.PriceKopecks, error) {
 	if orderID == "" || userID == "" {
-		return codes.ErrValidationFailed
+		return 0, codes.ErrValidationFailed
 	}
 	if exp.Before(time.Now()) {
-		return codes.ErrValidationFailed
+		return 0, codes.ErrValidationFailed
 	}
 	if _, err := s.repo.Get(orderID); err == nil {
-		return codes.ErrOrderAlreadyExists
+		return 0, codes.ErrOrderAlreadyExists
 	}
+
+	strat, err := packaging.GetStrategy(pkgType)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := strat.Validate(weight); err != nil {
+		return 0, err
+	}
+
+	total := price + strat.Surcharge()
 
 	now := time.Now()
 	o := &models.Order{
-		ID:        orderID,
-		UserID:    userID,
-		Status:    models.StatusAccepted,
-		ExpiresAt: exp,
-		CreatedAt: now,
+		ID:         orderID,
+		UserID:     userID,
+		Status:     models.StatusAccepted,
+		ExpiresAt:  exp,
+		CreatedAt:  now,
+		Weight:     weight,
+		Price:      int64(price),
+		TotalPrice: int64(total),
+		Package:    string(pkgType),
 	}
-	return s.repo.Create(o)
+
+	if err := s.repo.Create(o); err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
 
 func (s *ServiceImpl) ReturnOrder(orderID string) error {

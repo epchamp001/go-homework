@@ -49,11 +49,13 @@ package logger
 
 import (
 	"fmt"
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
 )
 
+// Logger defines an abstraction for a structured logger with logging levels.
 type Logger interface {
 	Debug(msg string, fields ...zap.Field)
 	Info(msg string, fields ...zap.Field)
@@ -68,11 +70,13 @@ type Logger interface {
 	Sync()
 }
 
+// ZapLogger is an implementation of the Logger interface based on Uber Zap.
 type ZapLogger struct {
 	logger *zap.Logger
 	sugar  *zap.SugaredLogger
 }
 
+// Option is the configuration function applied to zap.Config when creating the logger.
 type Option func(cfg *zap.Config)
 
 // WithMode sets the logging mode on the zap.Config.

@@ -2,12 +2,15 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
+
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/vo"
 	"pvz-cli/internal/usecase"
 )
 
+// NewListReturnsCmd возвращает CLI-команду `list-returns`, которая выводит список всех возвратов по заказам клиента.
 func NewListReturnsCmd(svc usecase.Service) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list-returns",

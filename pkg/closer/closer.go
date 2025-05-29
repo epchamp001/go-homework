@@ -1,3 +1,5 @@
+// Package closer предоставляет механизм для регистрации и последовательного
+// закрытия ресурсов (соединений, файлов и т.д.) при завершении работы приложения.
 package closer
 
 import (
@@ -7,23 +9,30 @@ import (
 	"sync"
 )
 
+// Func представляет функцию завершения, принимающую контекст и возвращающую ошибку в случае неудачного завершения.
 type Func func(ctx context.Context) error
 
+// Closer управляет списком функций завершения и обеспечивает их вызов в LIFO-порядке.
 type Closer struct {
 	mu    sync.Mutex
 	funcs []Func
 }
 
+// NewCloser создает новый экземпляр Closer.
 func NewCloser() *Closer {
 	return &Closer{}
 }
 
+// Add добавляет функцию завершения в стек Closer.
 func (c *Closer) Add(f Func) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.funcs = append(c.funcs, f)
 }
 
+// Close вызывает все зарегистрированные функции завершения в обратном порядке.
+// Если одна или несколько функций возвращают ошибку, ошибки собираются и возвращаются одной.
+// Если контекст истекает до завершения всех функций, возвращается ошибка таймаута.
 func (c *Closer) Close(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

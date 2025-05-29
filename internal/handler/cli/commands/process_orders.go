@@ -2,13 +2,17 @@ package commands
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/usecase"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
+// NewProcessOrdersCmd возвращает CLI-команду `process-orders`, которая обрабатывает список заказов клиента:
+//   - при action=issue — выдает заказы клиенту;
+//   - при action=return — оформляет возврат заказов клиентом.
 func NewProcessOrdersCmd(svc usecase.Service) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "process-orders",

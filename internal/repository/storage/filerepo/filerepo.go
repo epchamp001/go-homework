@@ -1,3 +1,4 @@
+// Package filerepo реализует файловое хранилище для заказов, возвратов и событий истории.
 package filerepo
 
 import (
@@ -12,6 +13,8 @@ import (
 	"time"
 )
 
+// FileRepo представляет файловое хранилище заказов, возвратов и истории.
+// Данные сохраняются в формате JSON на диск и кэшируются в памяти.
 type FileRepo struct {
 	pathOrders  string
 	pathReturns string
@@ -22,6 +25,7 @@ type FileRepo struct {
 	history []*models.HistoryEvent
 }
 
+// NewFileRepo инициализирует файловое хранилище и загружает существующие данные из JSON-файлов.
 func NewFileRepo(dataDir string) (*FileRepo, error) {
 	r := &FileRepo{
 		pathOrders:  filepath.Join(dataDir, "orders.json"),
@@ -32,6 +36,9 @@ func NewFileRepo(dataDir string) (*FileRepo, error) {
 
 	load := func(path string, dst interface{}) error {
 		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
 		defer f.Close()
 
 		if errors.Is(err, os.ErrNotExist) {

@@ -1,20 +1,23 @@
+// Package cli предоставляет пользовательский интерфейс командной строки (CLI) для работы с приложением.
 package cli
 
 import (
 	"bufio"
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"pvz-cli/internal/handler/cli/commands"
 	"pvz-cli/internal/usecase"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
-// REPL - Read, Eval, Print, Loop - прочитать, вычислить, вывести, цикл
+// REPL реализует простой цикл командной строки (Read-Eval-Print Loop) для взаимодействия с пользователем через текстовый интерфейс.
 type REPL struct {
 	svc usecase.Service
 }
 
+// NewREPL создает новый экземпляр REPL с сервисом бизнес-логики.
 func NewREPL(svc usecase.Service) *REPL {
 	return &REPL{svc: svc}
 }
