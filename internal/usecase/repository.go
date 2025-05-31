@@ -33,4 +33,7 @@ type Repository interface {
 
 	// ImportMany импортирует список заказов из внешнего файла в хранилище. Возвращает ошибку при попытке вставить дубликат.
 	ImportMany(orders []*models.Order) error
+
+	// ListAllOrders возвращает список всех заказов.
+	ListAllOrders() ([]*models.Order, error)
 }

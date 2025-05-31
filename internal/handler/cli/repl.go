@@ -68,6 +68,7 @@ func buildRootCommand(svc usecase.Service) *cobra.Command {
 		commands.NewOrderHistoryCmd(svc),
 		commands.NewScrollOrdersCmd(svc),
 		commands.NewImportOrdersCmd(svc),
+		commands.NewClientReportCmd(svc),
 	)
 
 	return root

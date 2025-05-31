@@ -206,3 +206,11 @@ func (r *FileRepo) ImportMany(list []*models.Order) error {
 	}
 	return r.dumpHistory()
 }
+
+func (r *FileRepo) ListAllOrders() ([]*models.Order, error) {
+	orders := make([]*models.Order, 0, len(r.orders))
+	for _, o := range r.orders {
+		orders = append(orders, o)
+	}
+	return orders, nil
+}

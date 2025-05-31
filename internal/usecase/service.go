@@ -3,13 +3,17 @@ package usecase
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"time"
+
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/pkg/errs"
-	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
 // Service определяет бизнес-логику работы Пункта Выдачи Заказов.
@@ -40,6 +44,9 @@ type Service interface {
 
 	// ImportOrders импортирует заказы из JSON-файла, возвращает количество успешно добавленных.
 	ImportOrders(filePath string) (imported int, err error)
+
+	// GenerateClientReportByte генерирует отчет по заказам клиентов. Возвращает слайс []byte для дальнейшего преобразования в формат .xlsx
+	GenerateClientReportByte(sortBy string) ([]byte, error)
 }
 
 type ServiceImpl struct {
@@ -255,4 +262,90 @@ func (s *ServiceImpl) ImportOrders(path string) (int, error) {
 		return 0, err
 	}
 	return len(batch), nil
+}
+
+func (s *ServiceImpl) generateClientReport(sortBy string) ([]*models.ClientReport, error) {
+	activeOrders, err := s.repo.ListAllOrders()
+	if err != nil {
+		return nil, err
+	}
+
+	returnsList, err := s.repo.ListReturns(vo.Pagination{})
+	if err != nil {
+		return nil, err
+	}
+
+	clientsMap := make(map[string]*models.ClientReport)
+
+	s.aggregateActiveOrders(clientsMap, activeOrders)
+	s.aggregateReturnRecords(clientsMap, returnsList)
+
+	reports := make([]*models.ClientReport, 0, len(clientsMap))
+	for _, v := range clientsMap {
+		reports = append(reports, v)
+	}
+
+	if err := sortReports(reports, sortBy); err != nil {
+		return nil, err
+	}
+
+	return reports, nil
+}
+
+// aggregateActiveOrders добавляет к clientsMap данные по не возвращённым заказам.
+func (s *ServiceImpl) aggregateActiveOrders(clientsMap map[string]*models.ClientReport, activeOrders []*models.Order) {
+	for _, o := range activeOrders {
+		cr, exists := clientsMap[o.UserID]
+		if !exists {
+			cr = &models.ClientReport{UserID: o.UserID}
+			clientsMap[o.UserID] = cr
+		}
+		cr.TotalOrders++
+		cr.TotalPurchaseSum += models.PriceKopecks(o.Price)
+	}
+}
+
+// aggregateReturnRecords добавляет к clientsMap данные по всем возвратам.
+func (s *ServiceImpl) aggregateReturnRecords(clientsMap map[string]*models.ClientReport, returnsList []*models.ReturnRecord) {
+	for _, rec := range returnsList {
+		cr, exists := clientsMap[rec.UserID]
+		if !exists {
+			cr = &models.ClientReport{UserID: rec.UserID}
+			clientsMap[rec.UserID] = cr
+		}
+		cr.TotalOrders++
+		cr.ReturnedOrders++
+		// цену не добавляю, т.к. покупка не состоялась
+	}
+}
+
+func (s *ServiceImpl) GenerateClientReportByte(sortBy string) ([]byte, error) {
+	reports, err := s.generateClientReport(sortBy)
+	if err != nil {
+		return nil, err
+	}
+
+	f := excelize.NewFile()
+	sheet := "ClientsReport"
+	f.SetSheetName(f.GetSheetName(0), sheet)
+
+	headers := []string{"UserID", "Total Orders", "Returned Orders", "Total Purchase Sum (₽)"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, h)
+	}
+
+	for i, r := range reports {
+		row := i + 2
+		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), r.UserID)
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), r.TotalOrders)
+		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), r.ReturnedOrders)
+		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), float64(r.TotalPurchaseSum)/100)
+	}
+
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

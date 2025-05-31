@@ -34,3 +34,46 @@ data/import_demo.json
 | **19** | `import-orders --file data/import_demo.json`                                                                                                             | `IMPORTED: 2`                                                                                                                             |
 | **20** | `list-orders --user-id U999 --page 1 --limit 5`                                                                                                          | увидите ORD200, ORD201                                                                                                                    |
 | **21** | `scroll-orders --user-id U999 --limit 1`                                                                                                                 | CLI покажет первую запись + `NEXT: ORD200` <br>введите `next` → вторая запись + `NEXT: ORD201` <br>ещё `next` → приложение завершит цикл. |
+
+## Дополнительная фича - Генерация отчёта
+
+1. Удалить (или очистить) из папки data/ файлы orders.json, returns.json и history.json, если в них остались данные.
+
+2. Запустить приложение и ввести подряд команды:
+
+`accept-order --order-id ORD1 --user-id userA --expires 2025-12-31 --weight 2 --price 10.00 --package bag`
+
+`accept-order --order-id ORD2 --user-id userA --expires 2025-12-31 --weight 1 --price 5.00 --package film`
+
+`accept-order --order-id ORD3 --user-id userB --expires 2025-12-31 --weight 3 --price 20.00 --package box`
+
+`accept-order --order-id ORD4 --user-id userC --expires 2025-12-31 --weight 0.5 --price 10.00`
+
+`process-orders --user-id userA --action issue --order-ids ORD1`
+
+Остановить приложение. Открыть файл data/orders.json и для записи "ORD2" вручную изменить поле `expires_at`:
+
+`"expires_at": "2025-05-31T00:00:00Z"`
+
+Снова запустить приложение и выполнить команды:
+
+`return-order --order-id ORD2`
+
+`client-report --sort orders --output report/clients_report.xlsx`
+
+Ожидаемый результат:
+
+| UserID | Total Orders | Returned Orders | Total Purchase Sum (₽) |
+|:------:|:------------:|:---------------:|:----------------------:|
+| userA  |      2       |        1        |         10.00          |
+| userB  |      1       |        0        |         20.00          |
+| userC  |      1       |        0        |         10.00          |
+
+
+Если поставим --sort sum, то результат должен быть:
+
+| UserID | Total Orders | Returned Orders | Total Purchase Sum (₽) |
+|:------:|:------------:|:---------------:|:----------------------:|
+| userB  |      1       |        0        |         20.00          |
+| userA  |      2       |        1        |         10.00          |
+| userC  |      1       |        0        |         10.00          |
