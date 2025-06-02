@@ -1,0 +1,187 @@
+syntax = "proto3";
+
+package orders;
+
+import "pvz/order_types.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "api/pkg/pvz;pvzpb";
+
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title:       "Order Pick-Up Point"
+    description: "API для управления процессами Пункта Выдачи Заказов"
+    version:     "1.0"
+    contact: {
+      name:  "Egor Ponyaev"
+      url:   "https://github.com/epchamp001"
+      email: "epchamp001@gmail.com"
+    }
+  }
+  host: "localhost:8080";
+  schemes: HTTP;
+  consumes: "application/json"
+  produces: "application/json"
+};
+
+
+service OrdersService {
+  // Принять заказ от курьера
+  rpc AcceptOrder(AcceptOrderRequest) returns (OrderResponse) {
+    option (google.api.http) = {
+      post: "/v1/orders/accept"
+      body: "*"
+    };
+  }
+
+  // Вернуть заказ курьеру
+  rpc ReturnOrder(OrderIdRequest) returns (OrderResponse) {
+    option (google.api.http) = {
+      post: "/v1/orders/{order_id}/return"
+    };
+  }
+
+  // Выдать заказы или принять возврат клиента
+  rpc ProcessOrders(ProcessOrdersRequest) returns (ProcessResult) {
+    option (google.api.http) = {
+      post: "/v1/orders/process"
+      body: "*"
+    };
+  }
+
+  // Получить список заказов клиента
+  rpc ListOrders(ListOrdersRequest) returns (OrdersList) {
+    option (google.api.http) = {
+      get: "/v1/orders"
+    };
+  }
+
+  // Получить список возвратов клиентов (постранично, от новых к старым)
+  rpc ListReturns(ListReturnsRequest) returns (ReturnsList) {
+    option (google.api.http) = {
+      get: "/v1/orders/returns"
+    };
+  }
+
+  // Получить историю изменения заказов
+  rpc GetHistory(GetHistoryRequest) returns (OrderHistoryList) {
+    option (google.api.http) = {
+      get: "/v1/orders/history"
+    };
+  }
+
+  // Импортировать заказы из JSON-файла (доп. ручка)
+  rpc ImportOrders(ImportOrdersRequest) returns (ImportResult) {
+    option (google.api.http) = {
+      post: "/v1/orders/import"
+      body: "*"
+    };
+  }
+
+  // Скачать клиентский отчёт в формате .xlsx
+  rpc DownloadClientReport(DownloadClientReportRequest) returns (DownloadClientReportResponse) {
+    option (google.api.http) = {
+      get: "/v1/reports/clients"
+    };
+  }
+}
+
+message AcceptOrderRequest {
+  uint64 order_id = 1;
+  uint64 user_id = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  optional PackageType package = 4;
+  float weight = 5;
+  float price = 6;
+}
+
+message OrderIdRequest {
+  uint64 order_id = 1;
+}
+
+message ProcessOrdersRequest {
+  uint64 user_id = 1;
+  ActionType action = 2;
+  repeated uint64 order_ids = 3;
+}
+
+message ListOrdersRequest {
+  uint64 user_id = 1;
+  bool in_pvz = 2;
+  optional uint32 last_n = 3;
+  optional Pagination pagination = 4;
+}
+
+message ListReturnsRequest {
+  optional Pagination pagination = 1;
+}
+
+message ImportOrdersRequest {
+  repeated AcceptOrderRequest orders = 1;
+}
+
+message GetHistoryRequest {
+  optional Pagination pagination = 1;
+}
+
+message DownloadClientReportRequest {
+  string sort_by = 1;
+}
+
+message OrderResponse {
+  OrderStatus status = 1;
+  uint64 order_id = 2;
+}
+
+message ProcessResult {
+  repeated uint64 processed = 1;
+  repeated uint64 errors = 2;
+}
+
+message OrdersList {
+  repeated Order orders = 1;
+  int32 total = 2;
+}
+
+message ReturnsList {
+  repeated Order returns = 1;
+}
+
+message OrderHistoryList {
+  repeated OrderHistory history = 1;
+}
+
+message ImportResult {
+  int32 imported = 1;
+  repeated uint64 errors = 2;
+}
+
+
+message DownloadClientReportResponse {
+  bytes report = 1;
+}
+
+message Order {
+  uint64 order_id = 1;
+  uint64 user_id = 2;
+  OrderStatus status = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  float weight = 5;
+  float total_price = 6;
+  optional PackageType package = 7;
+}
+
+
+message OrderHistory {
+  uint64 order_id = 1;
+  OrderStatus status = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message Pagination {
+  uint32 page = 1;
+  uint32 count_on_page = 2;
+}
