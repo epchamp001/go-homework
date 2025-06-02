@@ -3,14 +3,16 @@ package commands
 import (
 	"bufio"
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/vo"
 	"pvz-cli/internal/usecase"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
+// NewScrollOrdersCmd возвращает CLI-команду `scroll-orders`, которая позволяет постранично просматривать список заказов (бесконечная прокрутка).
 func NewScrollOrdersCmd(svc usecase.Service) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "scroll-orders",
@@ -31,10 +33,15 @@ func NewScrollOrdersCmd(svc usecase.Service) *cobra.Command {
 
 				for _, o := range orders {
 					fmt.Printf(
-						"%s: %s %s %s %s\n",
+						"%s: %s %s %s %s %s %.2f %.2f₽\n",
 						codes.CodeOrder,
-						o.ID, o.UserID, o.Status,
+						o.ID,
+						o.UserID,
+						o.Status,
 						o.ExpiresAt.Format("2006-01-02"),
+						o.Package,
+						o.Weight,
+						float64(o.Price)/100.0,
 					)
 				}
 

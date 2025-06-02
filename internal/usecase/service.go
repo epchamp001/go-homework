@@ -1,30 +1,52 @@
+// Package usecase содержит реализацию бизнес-логики приложения.
 package usecase
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"time"
+
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
+	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/pkg/errs"
-	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
+// Service определяет бизнес-логику работы Пункта Выдачи Заказов.
 type Service interface {
-	AcceptOrder(orderID, userID string, expires time.Time) error
+	// AcceptOrder регистрирует новый заказ и рассчитывает итоговую стоимость с учётом упаковки.
+	AcceptOrder(orderID, userID string, expires time.Time, weight float64, price models.PriceKopecks, pkgType models.PackageType) (models.PriceKopecks, error)
+
+	// ReturnOrder выполняет возврат заказа по его ID (если срок хранения истёк и не был выдан).
 	ReturnOrder(orderID string) error
 
+	// IssueOrders выполняет массовую выдачу заказов клиенту.
 	IssueOrders(userID string, ids []string) (map[string]error, error)
+
+	// ReturnOrdersByClient обрабатывает массовый возврат заказов клиентом в течение 48 часов после выдачи.
 	ReturnOrdersByClient(userID string, ids []string) (map[string]error, error)
 
+	// ListOrders возвращает заказы клиента с возможностью фильтрации, пагинации и лимита.
 	ListOrders(userID string, onlyInPVZ bool, lastN int, pg vo.Pagination) ([]*models.Order, int, error)
 
+	// ScrollOrders возвращает порцию заказов по курсору (постраничная прокрутка).
 	ScrollOrders(userID string, cursor vo.ScrollCursor) (orders []*models.Order, next vo.ScrollCursor, err error)
 
+	// ListReturns возвращает список возвратов с пагинацией.
 	ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, error)
+
+	// OrderHistory возвращает полную историю по заказам.
 	OrderHistory() ([]*models.HistoryEvent, error)
 
+	// ImportOrders импортирует заказы из JSON-файла, возвращает количество успешно добавленных.
 	ImportOrders(filePath string) (imported int, err error)
+
+	// GenerateClientReportByte генерирует отчет по заказам клиентов. Возвращает слайс []byte для дальнейшего преобразования в формат .xlsx
+	GenerateClientReportByte(sortBy string) ([]byte, error)
 }
 
 type ServiceImpl struct {
@@ -37,26 +59,46 @@ func NewService(repo Repository) *ServiceImpl {
 	}
 }
 
-func (s *ServiceImpl) AcceptOrder(orderID, userID string, exp time.Time) error {
+func (s *ServiceImpl) AcceptOrder(orderID, userID string, exp time.Time, weight float64, price models.PriceKopecks, pkgType models.PackageType) (models.PriceKopecks, error) {
 	if orderID == "" || userID == "" {
-		return codes.ErrValidationFailed
+		return 0, codes.ErrValidationFailed
 	}
 	if exp.Before(time.Now()) {
-		return codes.ErrValidationFailed
+		return 0, codes.ErrValidationFailed
 	}
 	if _, err := s.repo.Get(orderID); err == nil {
-		return codes.ErrOrderAlreadyExists
+		return 0, codes.ErrOrderAlreadyExists
 	}
+
+	strat, err := packaging.GetStrategy(pkgType)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := strat.Validate(weight); err != nil {
+		return 0, err
+	}
+
+	total := price + strat.Surcharge()
 
 	now := time.Now()
 	o := &models.Order{
-		ID:        orderID,
-		UserID:    userID,
-		Status:    models.StatusAccepted,
-		ExpiresAt: exp,
-		CreatedAt: now,
+		ID:         orderID,
+		UserID:     userID,
+		Status:     models.StatusAccepted,
+		ExpiresAt:  exp,
+		CreatedAt:  now,
+		Weight:     weight,
+		Price:      int64(price),
+		TotalPrice: int64(total),
+		Package:    string(pkgType),
 	}
-	return s.repo.Create(o)
+
+	if err := s.repo.Create(o); err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
 
 func (s *ServiceImpl) ReturnOrder(orderID string) error {
@@ -220,4 +262,90 @@ func (s *ServiceImpl) ImportOrders(path string) (int, error) {
 		return 0, err
 	}
 	return len(batch), nil
+}
+
+func (s *ServiceImpl) generateClientReport(sortBy string) ([]*models.ClientReport, error) {
+	activeOrders, err := s.repo.ListAllOrders()
+	if err != nil {
+		return nil, err
+	}
+
+	returnsList, err := s.repo.ListReturns(vo.Pagination{})
+	if err != nil {
+		return nil, err
+	}
+
+	clientsMap := make(map[string]*models.ClientReport)
+
+	s.aggregateActiveOrders(clientsMap, activeOrders)
+	s.aggregateReturnRecords(clientsMap, returnsList)
+
+	reports := make([]*models.ClientReport, 0, len(clientsMap))
+	for _, v := range clientsMap {
+		reports = append(reports, v)
+	}
+
+	if err := sortReports(reports, sortBy); err != nil {
+		return nil, err
+	}
+
+	return reports, nil
+}
+
+// aggregateActiveOrders добавляет к clientsMap данные по не возвращённым заказам.
+func (s *ServiceImpl) aggregateActiveOrders(clientsMap map[string]*models.ClientReport, activeOrders []*models.Order) {
+	for _, o := range activeOrders {
+		cr, exists := clientsMap[o.UserID]
+		if !exists {
+			cr = &models.ClientReport{UserID: o.UserID}
+			clientsMap[o.UserID] = cr
+		}
+		cr.TotalOrders++
+		cr.TotalPurchaseSum += models.PriceKopecks(o.Price)
+	}
+}
+
+// aggregateReturnRecords добавляет к clientsMap данные по всем возвратам.
+func (s *ServiceImpl) aggregateReturnRecords(clientsMap map[string]*models.ClientReport, returnsList []*models.ReturnRecord) {
+	for _, rec := range returnsList {
+		cr, exists := clientsMap[rec.UserID]
+		if !exists {
+			cr = &models.ClientReport{UserID: rec.UserID}
+			clientsMap[rec.UserID] = cr
+		}
+		cr.TotalOrders++
+		cr.ReturnedOrders++
+		// цену не добавляю, т.к. покупка не состоялась
+	}
+}
+
+func (s *ServiceImpl) GenerateClientReportByte(sortBy string) ([]byte, error) {
+	reports, err := s.generateClientReport(sortBy)
+	if err != nil {
+		return nil, err
+	}
+
+	f := excelize.NewFile()
+	sheet := "ClientsReport"
+	f.SetSheetName(f.GetSheetName(0), sheet)
+
+	headers := []string{"UserID", "Total Orders", "Returned Orders", "Total Purchase Sum (₽)"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, h)
+	}
+
+	for i, r := range reports {
+		row := i + 2
+		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), r.UserID)
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), r.TotalOrders)
+		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), r.ReturnedOrders)
+		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), float64(r.TotalPurchaseSum)/100)
+	}
+
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

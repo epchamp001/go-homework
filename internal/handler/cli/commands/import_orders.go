@@ -2,11 +2,14 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
+
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/usecase"
 )
 
+// NewImportOrdersCmd возвращает CLI-команду `import-orders`, которая импортирует заказы из внешнего файла.
 func NewImportOrdersCmd(svc usecase.Service) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import-orders",

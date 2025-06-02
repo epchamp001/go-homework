@@ -3,10 +3,12 @@ package app
 import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
 	"pvz-cli/internal/config"
 	"pvz-cli/pkg/logger"
 )
 
+// SetupLogger настраивает и возвращает экземпляр логгера на основе конфигурации.
 func SetupLogger(cfg config.LoggingConfig) (logger.Logger, error) {
 	lvl, err := zapcore.ParseLevel(cfg.Level)
 	if err != nil {

@@ -1,16 +1,24 @@
+// Package config предоставляет функциональность для чтения и хранения
+// конфигурационных параметров приложения.
 package config
 
 import (
 	"github.com/spf13/viper"
+
 	"path/filepath"
 	"pvz-cli/pkg/errs"
 )
 
+// Config объединяет все конфигурации в одну структуру.
 type Config struct {
 	Logging LoggingConfig `mapstructure:"logging"`
 	App     AppConfig     `mapstructure:"app"`
 }
 
+// LoadConfig загружает и распаковывает конфигурацию по указанному пути.
+//
+// Если путь содержит расширение (.yaml/.yml), используется полный путь к файлу.
+// Иначе ожидается config.{yaml,yml,json,...} внутри директории.
 func LoadConfig(configPath string) (*Config, error) {
 
 	viper := viper.New()

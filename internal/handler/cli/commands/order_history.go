@@ -2,12 +2,15 @@ package commands
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
+
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/usecase"
-	"time"
 )
 
+// NewOrderHistoryCmd возвращает CLI-команду `order-history`, которая показывает историю изменения заказов.
 func NewOrderHistoryCmd(svc usecase.Service) *cobra.Command {
 	return &cobra.Command{
 		Use:   "order-history",

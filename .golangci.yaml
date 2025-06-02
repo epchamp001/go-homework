@@ -1,0 +1,27 @@
+run:
+  timeout: 2m
+  tests: false
+
+linters:
+  enable:
+    - ineffassign    # Неиспользуемые присваивания
+    - unused         # Неиспользуемые переменные, импорты и т.п.
+    - goconst        # Предлагает вынести повторяющиеся строки/константы
+    - goimports      # Форматирует импорты и код (альтернатива gofmt)
+    - gocyclo        # Вычисляет цикломатическую сложность
+    - gocognit       # Проверяет когнитивную сложность функций
+  disable:
+    - errcheck
+
+linters-settings:
+  gocyclo:
+    min-complexity: 20
+  gocognit:
+    min-complexity: 20
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  sort-results: true
+
