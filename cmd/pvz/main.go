@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/spf13/pflag"
 	"os"
 	"os/signal"
 	"pvz-cli/internal/app"
@@ -11,6 +10,8 @@ import (
 	"pvz-cli/pkg/closer"
 	"syscall"
 	"time"
+
+	"github.com/spf13/pflag"
 )
 
 func main() {
@@ -85,6 +86,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	// делаю через fmt, потому что логгер уже закрыт
 	fmt.Println("Application stopped gracefully")
 }

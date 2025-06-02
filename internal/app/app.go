@@ -1,3 +1,7 @@
+// Package app инициализирует и запускает основное приложение,
+// включая конфигурацию, зависимости, маршруты и graceful shutdown.
+//
+// Этот пакет связывает все модули проекта и является точкой входа при запуске бинарника.
 package app
 
 import (
@@ -8,11 +12,13 @@ import (
 	"pvz-cli/pkg/logger"
 )
 
+// App позволяет удобно и аккуратно поднимать весь проект и его зависимости.
 type App struct {
 	repl *cli.REPL
 	log  logger.Logger
 }
 
+// New создаёт новое приложение с инициализацией хранилища, бизнес-логики и REPL.
 func New(log logger.Logger) *App {
 
 	repo, err := filerepo.NewFileRepo("data")
@@ -32,6 +38,7 @@ func New(log logger.Logger) *App {
 	}
 }
 
+// Run запускает REPL-приложение, обрабатывающее пользовательские команды.
 func (a *App) Run(ctx context.Context) error {
 	return a.repl.Run()
 }

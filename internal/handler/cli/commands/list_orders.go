@@ -2,12 +2,15 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
+
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/vo"
 	"pvz-cli/internal/usecase"
 )
 
+// NewListOrdersCmd возвращает CLI-команду `list-orders`, которая выводит список заказов клиента с возможностью пагинации.
 func NewListOrdersCmd(svc usecase.Service) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list-orders",
@@ -32,10 +35,15 @@ func NewListOrdersCmd(svc usecase.Service) *cobra.Command {
 
 			for _, o := range orders {
 				fmt.Printf(
-					"%s: %s %s %s %s\n",
+					"%s: %s %s %s %s %s %.2f %.2f₽\n",
 					codes.CodeOrder,
-					o.ID, o.UserID, o.Status,
+					o.ID,
+					o.UserID,
+					o.Status,
 					o.ExpiresAt.Format("2006-01-02"),
+					o.Package,
+					o.Weight,
+					float64(o.Price)/100.0,
 				)
 			}
 

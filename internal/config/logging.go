@@ -1,10 +1,12 @@
 package config
 
+// SamplingConfig задаёт параметры sample-логирования для высокой пропускной способности.
 type SamplingConfig struct {
 	Initial    int `mapstructure:"initial"`
 	Thereafter int `mapstructure:"thereafter"`
 }
 
+// LoggingConfig описывает параметры конфигурации логгера.
 type LoggingConfig struct {
 	Mode              string                 `mapstructure:"mode"`
 	Level             string                 `mapstructure:"level"`
