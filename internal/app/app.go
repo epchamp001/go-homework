@@ -12,6 +12,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -42,7 +43,11 @@ type Server struct {
 func NewServer(cfg *config.Config, log logger.Logger) *Server {
 	c := closer.NewCloser()
 
-	grpcSrv := grpc.NewServer()
+	limiter := rate.NewLimiter(rate.Limit(5), 5)
+	
+	grpcSrv := grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.RateLimitInterceptor(limiter)),
+	)
 	reflection.Register(grpcSrv)
 
 	s := &Server{

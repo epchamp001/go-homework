@@ -27,8 +27,9 @@ VENDOR_DIR         := $(CURDIR)/vendor-proto
 PROTO_TMPL_DIR     := $(VENDOR_DIR)/protobuf
 TYPE_TMPL_DIR      := $(VENDOR_DIR)/googleapis
 OPENAPI_TMPL_DIR := $(VENDOR_DIR)/grpc-gateway
+VALIDATE_TMP := $(OPENAPI_TMPL_DIR)/protoc-gen-validate-temp
 
-.PHONY: .bin-deps fetch-protobuf fetch-google-type fetch-openapiv2-options fetch-google-api .vendor-proto
+.PHONY: .bin-deps fetch-protobuf fetch-google-type fetch-openapiv2-options fetch-google-api fetch-validate .vendor-proto
 
 .bin-deps: export GOBIN := $(LOCAL_BIN)
 .bin-deps: export PROTOC_VERSION := protoc-31.1-osx-aarch_64
@@ -46,7 +47,8 @@ OPENAPI_TMPL_DIR := $(VENDOR_DIR)/grpc-gateway
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && \
 	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest && \
-	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest && \
+	go install github.com/envoyproxy/protoc-gen-validate@latest
 
 fetch-protobuf:
 	rm -rf $(PROTO_TMPL_DIR)
@@ -100,7 +102,20 @@ fetch-google-api:
 	mv google/api $(VENDOR_DIR)/google/ && \
 	cd .. && rm -rf fetch-googleapi-temp
 
-.vendor-proto: fetch-protobuf fetch-google-type fetch-openapiv2-options fetch-google-api
+fetch-validate:
+	rm -rf $(VALIDATE_TMP)
+	git clone -b v0.6.0 --single-branch -n --depth=1 --filter=tree:0 \
+	  https://github.com/envoyproxy/protoc-gen-validate.git $(VALIDATE_TMP) && \
+	cd $(VALIDATE_TMP) && \
+	git sparse-checkout init --cone && \
+	git sparse-checkout set validate && \
+	git checkout
+	rm -rf $(VENDOR_DIR)/validate
+	mkdir -p $(VENDOR_DIR)
+	mv $(VALIDATE_TMP)/validate $(VENDOR_DIR)/
+	rm -rf $(VALIDATE_TMP)
+
+.vendor-proto: fetch-protobuf fetch-google-type fetch-openapiv2-options fetch-google-api fetch-validate
 	@echo "✅ All vendor protos are up to date"
 
 PROTO_PATH := $(CURDIR)/api/proto
@@ -154,6 +169,13 @@ SERVICE_PROTO_FILES       := $(shell find $(PROTO_PATH) -type f -name "*_service
 	  --openapiv2_opt generate_unbound_methods=true \
 	  $(SERVICE_PROTO_FILES)
 
+	protoc \
+		-I $(VENDOR_DIR) \
+		-I $(PROTO_PATH) \
+		--plugin=protoc-gen-validate=$(LOCAL_BIN)/protoc-gen-validate \
+		--validate_out="lang=go,paths=source_relative:$(API_OUT_PATH)" \
+		$(PROTO_FILES) $(SERVICE_PROTO_FILES)
+
 	go mod tidy
 
 
@@ -199,5 +221,12 @@ gen:
 	  --openapiv2_opt allow_merge=true \
 	  --openapiv2_opt generate_unbound_methods=true \
 	  $(SERVICE_PROTO_FILES)
+
+	protoc \
+		-I $(VENDOR_DIR) \
+		-I $(PROTO_PATH) \
+		--plugin=protoc-gen-validate=$(LOCAL_BIN)/protoc-gen-validate \
+		--validate_out="lang=go,paths=source_relative:$(API_OUT_PATH)" \
+		$(PROTO_FILES) $(SERVICE_PROTO_FILES)
 
 	go mod tidy

@@ -3,6 +3,7 @@ module pvz-cli
 go 1.24.1
 
 require (
+	github.com/envoyproxy/protoc-gen-validate v1.1.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3
 	github.com/spf13/pflag v1.0.6
@@ -11,6 +12,7 @@ require (
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/xuri/excelize/v2 v2.9.1
 	go.uber.org/zap v1.27.0
+	golang.org/x/time v0.8.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5

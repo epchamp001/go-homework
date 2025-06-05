@@ -7,6 +7,7 @@
 package pvzpb
 
 import (
+	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -25,13 +26,19 @@ const (
 )
 
 type AcceptOrderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OrderId       uint64                 `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	UserId        uint64                 `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	Package       *PackageType           `protobuf:"varint,4,opt,name=package,proto3,enum=orders.PackageType,oneof" json:"package,omitempty"`
-	Weight        float32                `protobuf:"fixed32,5,opt,name=weight,proto3" json:"weight,omitempty"`
-	Price         float32                `protobuf:"fixed32,6,opt,name=price,proto3" json:"price,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID заказа, обязателен, > 0
+	OrderId uint64 `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	// ID пользователя, обязателен, > 0
+	UserId uint64 `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Срок хранения, обязателен (будущая дата проверяется бизнес-логикой)
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// Тип упаковки — валидный enum (может быть не задан)
+	Package *PackageType `protobuf:"varint,4,opt,name=package,proto3,enum=orders.PackageType,oneof" json:"package,omitempty"`
+	// Вес > 0 (проверка максимального веса зависит от упаковки и выполняется бизнес-логикой)
+	Weight float32 `protobuf:"fixed32,5,opt,name=weight,proto3" json:"weight,omitempty"`
+	// Цена > 0 (в рублях, переводится в копейки бизнес-логикой)
+	Price         float32 `protobuf:"fixed32,6,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -109,8 +116,9 @@ func (x *AcceptOrderRequest) GetPrice() float32 {
 }
 
 type OrderIdRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OrderId       uint64                 `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID заказа, обязателен, > 0
+	OrderId       uint64 `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -153,10 +161,13 @@ func (x *OrderIdRequest) GetOrderId() uint64 {
 }
 
 type ProcessOrdersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Action        ActionType             `protobuf:"varint,2,opt,name=action,proto3,enum=orders.ActionType" json:"action,omitempty"`
-	OrderIds      []uint64               `protobuf:"varint,3,rep,packed,name=order_ids,json=orderIds,proto3" json:"order_ids,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID пользователя, обязателен, > 0
+	UserId uint64 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Тип действия (ISSUE или RETURN)
+	Action ActionType `protobuf:"varint,2,opt,name=action,proto3,enum=orders.ActionType" json:"action,omitempty"`
+	// Список ID заказов, каждый > 0, минимум один
+	OrderIds      []uint64 `protobuf:"varint,3,rep,packed,name=order_ids,json=orderIds,proto3" json:"order_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -213,11 +224,13 @@ func (x *ProcessOrdersRequest) GetOrderIds() []uint64 {
 }
 
 type ListOrdersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	InPvz         bool                   `protobuf:"varint,2,opt,name=in_pvz,json=inPvz,proto3" json:"in_pvz,omitempty"`
-	LastN         *uint32                `protobuf:"varint,3,opt,name=last_n,json=lastN,proto3,oneof" json:"last_n,omitempty"`
-	Pagination    *Pagination            `protobuf:"bytes,4,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Требует user_id > 0
+	UserId uint64 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	InPvz  bool   `protobuf:"varint,2,opt,name=in_pvz,json=inPvz,proto3" json:"in_pvz,omitempty"`
+	// Если задан last_n, то > 0
+	LastN         *uint32     `protobuf:"varint,3,opt,name=last_n,json=lastN,proto3,oneof" json:"last_n,omitempty"`
+	Pagination    *Pagination `protobuf:"bytes,4,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -281,8 +294,9 @@ func (x *ListOrdersRequest) GetPagination() *Pagination {
 }
 
 type ImportOrdersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Orders        []*AcceptOrderRequest  `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Список заказов, минимум один элемент
+	Orders        []*AcceptOrderRequest `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -976,38 +990,43 @@ var File_pvz_order_service_proto protoreflect.FileDescriptor
 
 const file_pvz_order_service_proto_rawDesc = "" +
 	"\n" +
-	"\x17pvz/order_service.proto\x12\x06orders\x1a\x15pvz/order_types.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"\x80\x03\n" +
-	"\x12AcceptOrderRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\x04R\aorderId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\x04R\x06userId\x129\n" +
+	"\x17pvz/order_service.proto\x12\x06orders\x1a\x15pvz/order_types.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x17validate/validate.proto\"\xb4\x03\n" +
+	"\x12AcceptOrderRequest\x12\"\n" +
+	"\border_id\x18\x01 \x01(\x04B\a\xfaB\x042\x02 \x00R\aorderId\x12 \n" +
+	"\auser_id\x18\x02 \x01(\x04B\a\xfaB\x042\x02 \x00R\x06userId\x129\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x122\n" +
-	"\apackage\x18\x04 \x01(\x0e2\x13.orders.PackageTypeH\x00R\apackage\x88\x01\x01\x12\x16\n" +
-	"\x06weight\x18\x05 \x01(\x02R\x06weight\x12\x14\n" +
-	"\x05price\x18\x06 \x01(\x02R\x05price:\x8c\x01\x92A\x88\x01\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12<\n" +
+	"\apackage\x18\x04 \x01(\x0e2\x13.orders.PackageTypeB\b\xfaB\x05\x82\x01\x02\x10\x01H\x00R\apackage\x88\x01\x01\x12\"\n" +
+	"\x06weight\x18\x05 \x01(\x02B\n" +
+	"\xfaB\a\n" +
+	"\x05%\x00\x00\x00\x00R\x06weight\x12 \n" +
+	"\x05price\x18\x06 \x01(\x02B\n" +
+	"\xfaB\a\n" +
+	"\x05%\x00\x00\x00\x00R\x05price:\x8c\x01\x92A\x88\x01\n" +
 	"\x85\x01J\x82\x01{\"order_id\":\"12345\",\"user_id\":\"67890\",\"expires_at\":\"2025-12-31T12:00:00Z\",\"package\":\"PACKAGE_TYPE_BOX\",\"weight\":1.5,\"price\":100.0}B\n" +
 	"\n" +
-	"\b_package\"H\n" +
-	"\x0eOrderIdRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\x04R\aorderId:\x1b\x92A\x18\n" +
-	"\x16J\x14{\"order_id\":\"12345\"}\"\xc9\x01\n" +
-	"\x14ProcessOrdersRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12*\n" +
-	"\x06action\x18\x02 \x01(\x0e2\x12.orders.ActionTypeR\x06action\x12\x1b\n" +
-	"\torder_ids\x18\x03 \x03(\x04R\borderIds:O\x92AL\n" +
-	"JJH{\"user_id\":\"123\",\"action\":\"ACTION_TYPE_ISSUE\",\"order_ids\":[\"1\",\"2\",\"3\"]}\"\x91\x02\n" +
-	"\x11ListOrdersRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12\x15\n" +
-	"\x06in_pvz\x18\x02 \x01(\bR\x05inPvz\x12\x1a\n" +
-	"\x06last_n\x18\x03 \x01(\rH\x00R\x05lastN\x88\x01\x01\x127\n" +
+	"\b_package\"Q\n" +
+	"\x0eOrderIdRequest\x12\"\n" +
+	"\border_id\x18\x01 \x01(\x04B\a\xfaB\x042\x02 \x00R\aorderId:\x1b\x92A\x18\n" +
+	"\x16J\x14{\"order_id\":\"12345\"}\"\xec\x01\n" +
+	"\x14ProcessOrdersRequest\x12 \n" +
+	"\auser_id\x18\x01 \x01(\x04B\a\xfaB\x042\x02 \x00R\x06userId\x124\n" +
+	"\x06action\x18\x02 \x01(\x0e2\x12.orders.ActionTypeB\b\xfaB\x05\x82\x01\x02\x10\x01R\x06action\x12+\n" +
+	"\torder_ids\x18\x03 \x03(\x04B\x0e\xfaB\v\x92\x01\b\b\x01\"\x042\x02 \x00R\borderIds:O\x92AL\n" +
+	"JJH{\"user_id\":\"123\",\"action\":\"ACTION_TYPE_ISSUE\",\"order_ids\":[\"1\",\"2\",\"3\"]}\"\xa3\x02\n" +
+	"\x11ListOrdersRequest\x12 \n" +
+	"\auser_id\x18\x01 \x01(\x04B\a\xfaB\x042\x02 \x00R\x06userId\x12\x15\n" +
+	"\x06in_pvz\x18\x02 \x01(\bR\x05inPvz\x12#\n" +
+	"\x06last_n\x18\x03 \x01(\rB\a\xfaB\x04*\x02 \x00H\x00R\x05lastN\x88\x01\x01\x127\n" +
 	"\n" +
 	"pagination\x18\x04 \x01(\v2\x12.orders.PaginationH\x01R\n" +
 	"pagination\x88\x01\x01:]\x92AZ\n" +
 	"XJV{\"user_id\":\"123\",\"in_pvz\":true,\"last_n\":10,\"pagination\":{\"page\":1,\"count_on_page\":20}}B\t\n" +
 	"\a_last_nB\r\n" +
-	"\v_pagination\"\xdf\x02\n" +
-	"\x13ImportOrdersRequest\x122\n" +
-	"\x06orders\x18\x01 \x03(\v2\x1a.orders.AcceptOrderRequestR\x06orders:\x93\x02\x92A\x8f\x02\n" +
+	"\v_pagination\"\xee\x02\n" +
+	"\x13ImportOrdersRequest\x12A\n" +
+	"\x06orders\x18\x01 \x03(\v2\x1a.orders.AcceptOrderRequestB\r\xfaB\n" +
+	"\x92\x01\a\b\x01\"\x03\x8a\x01\x00R\x06orders:\x93\x02\x92A\x8f\x02\n" +
 	"\x8c\x02J\x89\x02{\"orders\":[{\"order_id\":\"100\",\"user_id\":\"200\",\"expires_at\":\"2025-12-15T10:00:00Z\",\"package\":\"PACKAGE_TYPE_BAG\",\"weight\":1.0,\"price\":50.0},{\"order_id\":\"101\",\"user_id\":\"201\",\"expires_at\":\"2025-11-30T15:00:00Z\",\"package\":\"PACKAGE_TYPE_BOX\",\"weight\":2.0,\"price\":150.0}]}\"\x90\x01\n" +
 	"\x11GetHistoryRequest\x127\n" +
 	"\n" +

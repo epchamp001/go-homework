@@ -25,6 +25,7 @@
 #include "absl/strings/cord.h"
 #include "absl/strings/internal/resize_uninitialized.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "google/protobuf/arena.h"
 #include "google/protobuf/arenastring.h"
 #include "google/protobuf/endian.h"
@@ -205,6 +206,7 @@ class PROTOBUF_EXPORT EpsCopyInputStream {
     return AppendStringFallback(ptr, size, s);
   }
 
+  [[nodiscard]] const char* ReadArray(const char* ptr, absl::Span<char> out);
   [[nodiscard]] const char* VerifyUTF8(const char* ptr, size_t size);
 
   [[nodiscard]] const char* ReadMicroString(const char* ptr, MicroString& str,
@@ -278,6 +280,14 @@ class PROTOBUF_EXPORT EpsCopyInputStream {
   // Returns true if more data is available, if false is returned one has to
   // call Done for further checks.
   bool DataAvailable(const char* ptr) { return ptr < limit_end_; }
+
+  int BytesAvailable(const char* ptr) const {
+    ABSL_DCHECK_NE(ptr, nullptr);
+    ptrdiff_t available = buffer_end_ + kSlopBytes - ptr;
+    ABSL_DCHECK_GE(available, 0);
+    ABSL_DCHECK_LE(available, INT_MAX);
+    return static_cast<int>(available);
+  }
 
 
  protected:
@@ -372,16 +382,6 @@ class PROTOBUF_EXPORT EpsCopyInputStream {
   // systems. TODO do we need to set this as build flag?
   enum { kSafeStringSize = 50000000 };
 
- protected:
-  int BytesAvailable(const char* ptr) const {
-    ABSL_DCHECK_NE(ptr, nullptr);
-    ptrdiff_t available = buffer_end_ + kSlopBytes - ptr;
-    ABSL_DCHECK_GE(available, 0);
-    ABSL_DCHECK_LE(available, INT_MAX);
-    return static_cast<int>(available);
-  }
-
- private:
   // Returns true if it has enough available data given requested. Note that
   // "available" can be negative but "requested" must not. Casting is done to
   // preserve sign bit for the latter only.
@@ -422,6 +422,7 @@ class PROTOBUF_EXPORT EpsCopyInputStream {
   const char* AppendStringFallback(const char* ptr, int size, std::string* str);
   const char* VerifyUTF8Fallback(const char* ptr, size_t size);
   const char* ReadStringFallback(const char* ptr, int size, std::string* str);
+  const char* ReadArrayFallback(const char* ptr, absl::Span<char> out);
   const char* ReadCordFallback(const char* ptr, int size, absl::Cord* cord);
   template <bool kExperimentalV2>
   static bool ParseEndsInSlopRegion(const char* begin, int overrun, int depth);

@@ -6,9 +6,9 @@ import "pvz/order_types.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
+import "validate/validate.proto";
 
 option go_package = "api/pkg/pvz;pvzpb";
-
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -26,7 +26,6 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   consumes: "application/json"
   produces: "application/json"
 };
-
 
 service OrdersService {
   // Принять заказ от курьера
@@ -90,12 +89,33 @@ message AcceptOrderRequest {
     }
   };
 
-  uint64 order_id = 1;
-  uint64 user_id = 2;
+  // ID заказа, обязателен, > 0
+  uint64 order_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
+  // ID пользователя, обязателен, > 0
+  uint64 user_id = 2 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
+  // Срок хранения, обязателен (будущая дата проверяется бизнес-логикой)
   google.protobuf.Timestamp expires_at = 3;
-  optional PackageType package = 4;
-  float weight = 5;
-  float price = 6;
+
+  // Тип упаковки — валидный enum (может быть не задан)
+  optional PackageType package = 4 [
+    (validate.rules).enum = {defined_only: true}
+  ];
+
+  // Вес > 0 (проверка максимального веса зависит от упаковки и выполняется бизнес-логикой)
+  float weight = 5 [
+    (validate.rules).float = {gt: 0}
+  ];
+
+  // Цена > 0 (в рублях, переводится в копейки бизнес-логикой)
+  float price = 6 [
+    (validate.rules).float = {gt: 0}
+  ];
 }
 
 message OrderIdRequest {
@@ -105,7 +125,10 @@ message OrderIdRequest {
     }
   };
 
-  uint64 order_id = 1;
+  // ID заказа, обязателен, > 0
+  uint64 order_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
 }
 
 message ProcessOrdersRequest {
@@ -115,9 +138,23 @@ message ProcessOrdersRequest {
     }
   };
 
-  uint64 user_id = 1;
-  ActionType action = 2;
-  repeated uint64 order_ids = 3;
+  // ID пользователя, обязателен, > 0
+  uint64 user_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
+  // Тип действия (ISSUE или RETURN)
+  ActionType action = 2 [
+    (validate.rules).enum = {defined_only: true}
+  ];
+
+  // Список ID заказов, каждый > 0, минимум один
+  repeated uint64 order_ids = 3 [
+    (validate.rules).repeated = {
+      min_items: 1
+      items: {uint64: {gt: 0}}
+    }
+  ];
 }
 
 message ListOrdersRequest {
@@ -127,9 +164,18 @@ message ListOrdersRequest {
     }
   };
 
-  uint64 user_id = 1;
+  // Требует user_id > 0
+  uint64 user_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
   bool in_pvz = 2;
-  optional uint32 last_n = 3;
+
+  // Если задан last_n, то > 0
+  optional uint32 last_n = 3 [
+    (validate.rules).uint32 = {gt: 0}
+  ];
+
   optional Pagination pagination = 4;
 }
 
@@ -140,7 +186,13 @@ message ImportOrdersRequest {
     }
   };
 
-  repeated AcceptOrderRequest orders = 1;
+  // Список заказов, минимум один элемент
+  repeated AcceptOrderRequest orders = 1 [
+    (validate.rules).repeated = {
+      min_items: 1
+      items: {message: {}}
+    }
+  ];
 }
 
 message GetHistoryRequest {
@@ -152,7 +204,6 @@ message GetHistoryRequest {
 
   optional Pagination pagination = 1;
 }
-
 
 message OrderResponse {
   option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {

@@ -27,16 +27,11 @@ func RegisterOrderService(grpcServer *grpc.Server, svc usecase.Service) {
 }
 
 func (s *OrderServiceServer) AcceptOrder(ctx context.Context, req *pvzpb.AcceptOrderRequest) (*pvzpb.OrderResponse, error) {
-	if req == nil ||
-		req.OrderId == 0 ||
-		req.UserId == 0 ||
-		req.ExpiresAt == nil ||
-		req.Weight <= 0 ||
-		req.Price <= 0 {
-		return nil, grpcstatus.Error(
-			codes.InvalidArgument,
-			"order_id, user_id, expires_at, weight и price обязательны",
-		)
+	if req == nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, "AcceptOrderRequest is nil")
+	}
+	if err := req.Validate(); err != nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
 	}
 
 	domainOrder, err := mappers.ProtoToDomainOrderForImport(req)
@@ -69,8 +64,11 @@ func (s *OrderServiceServer) AcceptOrder(ctx context.Context, req *pvzpb.AcceptO
 }
 
 func (s *OrderServiceServer) ReturnOrder(ctx context.Context, req *pvzpb.OrderIdRequest) (*pvzpb.OrderResponse, error) {
-	if req == nil || req.OrderId == 0 {
-		return nil, grpcstatus.Error(codes.InvalidArgument, "order_id обязателен")
+	if req == nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, "OrderIdRequest is nil")
+	}
+	if err := req.Validate(); err != nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
 	}
 
 	orderIDStr := strconv.FormatUint(req.OrderId, 10)
@@ -85,8 +83,11 @@ func (s *OrderServiceServer) ReturnOrder(ctx context.Context, req *pvzpb.OrderId
 }
 
 func (s *OrderServiceServer) ProcessOrders(ctx context.Context, req *pvzpb.ProcessOrdersRequest) (*pvzpb.ProcessResult, error) {
-	if req == nil || req.UserId == 0 || len(req.OrderIds) == 0 {
-		return nil, grpcstatus.Error(codes.InvalidArgument, "user_id и order_ids обязательны")
+	if req == nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, "ProcessOrdersRequest is nil")
+	}
+	if err := req.Validate(); err != nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
 	}
 
 	userIDStr := strconv.FormatUint(req.UserId, 10)
@@ -122,8 +123,11 @@ func (s *OrderServiceServer) ProcessOrders(ctx context.Context, req *pvzpb.Proce
 }
 
 func (s *OrderServiceServer) ListOrders(ctx context.Context, req *pvzpb.ListOrdersRequest) (*pvzpb.OrdersList, error) {
-	if req == nil || req.UserId == 0 {
-		return nil, grpcstatus.Error(codes.InvalidArgument, "user_id обязателен")
+	if req == nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, "ListOrdersRequest is nil")
+	}
+	if err := req.Validate(); err != nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
 	}
 
 	lastN := 0
@@ -160,6 +164,12 @@ func (s *OrderServiceServer) ListOrders(ctx context.Context, req *pvzpb.ListOrde
 }
 
 func (s *OrderServiceServer) ListReturns(ctx context.Context, req *pvzpb.ListReturnsRequest) (*pvzpb.ReturnsList, error) {
+	if req != nil {
+		if err := req.Validate(); err != nil {
+			return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+
 	pagination := mappers.ProtoToDomainPagination(req.Pagination)
 
 	returnRecords, err := s.svc.ListReturns(pagination)
@@ -185,6 +195,12 @@ func (s *OrderServiceServer) ListReturns(ctx context.Context, req *pvzpb.ListRet
 }
 
 func (s *OrderServiceServer) GetHistory(ctx context.Context, req *pvzpb.GetHistoryRequest) (*pvzpb.OrderHistoryList, error) {
+	if req != nil {
+		if err := req.Validate(); err != nil {
+			return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+
 	pagination := mappers.ProtoToDomainPagination(req.Pagination)
 
 	historyEvents, _, err := s.svc.OrderHistory(pagination)
@@ -210,6 +226,13 @@ func (s *OrderServiceServer) GetHistory(ctx context.Context, req *pvzpb.GetHisto
 }
 
 func (s *OrderServiceServer) ImportOrders(ctx context.Context, req *pvzpb.ImportOrdersRequest) (*pvzpb.ImportResult, error) {
+	if req == nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, "ImportOrdersRequest is nil")
+	}
+	if err := req.Validate(); err != nil {
+		return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
+	}
+
 	importList := make([]*models.Order, 0, len(req.Orders))
 	for _, o := range req.Orders {
 		domainOrder, mapErr := mappers.ProtoToDomainOrderForImport(o)

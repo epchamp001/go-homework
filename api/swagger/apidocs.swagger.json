@@ -47,6 +47,7 @@
         "parameters": [
           {
             "name": "userId",
+            "description": "Требует user_id \u003e 0",
             "in": "query",
             "required": false,
             "type": "string",
@@ -60,6 +61,7 @@
           },
           {
             "name": "lastN",
+            "description": "Если задан last_n, то \u003e 0",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -283,6 +285,7 @@
         "parameters": [
           {
             "name": "orderId",
+            "description": "ID заказа, обязателен, \u003e 0",
             "in": "path",
             "required": true,
             "type": "string",
@@ -309,26 +312,32 @@
       "properties": {
         "orderId": {
           "type": "string",
-          "format": "uint64"
+          "format": "uint64",
+          "title": "ID заказа, обязателен, \u003e 0"
         },
         "userId": {
           "type": "string",
-          "format": "uint64"
+          "format": "uint64",
+          "title": "ID пользователя, обязателен, \u003e 0"
         },
         "expiresAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "title": "Срок хранения, обязателен (будущая дата проверяется бизнес-логикой)"
         },
         "package": {
-          "$ref": "#/definitions/ordersPackageType"
+          "$ref": "#/definitions/ordersPackageType",
+          "title": "Тип упаковки — валидный enum (может быть не задан)"
         },
         "weight": {
           "type": "number",
-          "format": "float"
+          "format": "float",
+          "title": "Вес \u003e 0 (проверка максимального веса зависит от упаковки и выполняется бизнес-логикой)"
         },
         "price": {
           "type": "number",
-          "format": "float"
+          "format": "float",
+          "title": "Цена \u003e 0 (в рублях, переводится в копейки бизнес-логикой)"
         }
       }
     },
@@ -369,7 +378,8 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/ordersAcceptOrderRequest"
-          }
+          },
+          "title": "Список заказов, минимум один элемент"
         }
       }
     },
@@ -575,17 +585,20 @@
       "properties": {
         "userId": {
           "type": "string",
-          "format": "uint64"
+          "format": "uint64",
+          "title": "ID пользователя, обязателен, \u003e 0"
         },
         "action": {
-          "$ref": "#/definitions/ordersActionType"
+          "$ref": "#/definitions/ordersActionType",
+          "title": "Тип действия (ISSUE или RETURN)"
         },
         "orderIds": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uint64"
-          }
+          },
+          "title": "Список ID заказов, каждый \u003e 0, минимум один"
         }
       }
     },
