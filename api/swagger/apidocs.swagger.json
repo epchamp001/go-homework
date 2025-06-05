@@ -159,7 +159,7 @@
     },
     "/v1/orders/import": {
       "post": {
-        "summary": "Импортировать заказы из JSON-файла (доп. ручка)",
+        "summary": "Импортировать заказы",
         "operationId": "OrdersService_ImportOrders",
         "responses": {
           "200": {
@@ -293,42 +293,19 @@
           "OrdersService"
         ]
       }
-    },
-    "/v1/reports/clients": {
-      "get": {
-        "summary": "Скачать клиентский отчёт в формате .xlsx",
-        "operationId": "OrdersService_DownloadClientReport",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/ordersDownloadClientReportResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "sortBy",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "OrdersService"
-        ]
-      }
     }
   },
   "definitions": {
     "ordersAcceptOrderRequest": {
       "type": "object",
+      "example": {
+        "order_id": "12345",
+        "user_id": "67890",
+        "expires_at": "2025-12-31T12:00:00Z",
+        "package": "PACKAGE_TYPE_BOX",
+        "weight": 1.5,
+        "price": 100.0
+      },
       "properties": {
         "orderId": {
           "type": "string",
@@ -364,17 +341,28 @@
       ],
       "default": "ACTION_TYPE_UNSPECIFIED"
     },
-    "ordersDownloadClientReportResponse": {
-      "type": "object",
-      "properties": {
-        "report": {
-          "type": "string",
-          "format": "byte"
-        }
-      }
-    },
     "ordersImportOrdersRequest": {
       "type": "object",
+      "example": {
+        "orders": [
+          {
+            "order_id": "100",
+            "user_id": "200",
+            "expires_at": "2025-12-15T10:00:00Z",
+            "package": "PACKAGE_TYPE_BAG",
+            "weight": 1.0,
+            "price": 50.0
+          },
+          {
+            "order_id": "101",
+            "user_id": "201",
+            "expires_at": "2025-11-30T15:00:00Z",
+            "package": "PACKAGE_TYPE_BOX",
+            "weight": 2.0,
+            "price": 150.0
+          }
+        ]
+      },
       "properties": {
         "orders": {
           "type": "array",
@@ -387,6 +375,10 @@
     },
     "ordersImportResult": {
       "type": "object",
+      "example": {
+        "imported": 2,
+        "errors": []
+      },
       "properties": {
         "imported": {
           "type": "integer",
@@ -403,6 +395,15 @@
     },
     "ordersOrder": {
       "type": "object",
+      "example": {
+        "order_id": "1",
+        "user_id": "123",
+        "status": "ORDER_STATUS_ACCEPTED",
+        "expires_at": "2025-12-05T10:00:00Z",
+        "weight": 1.5,
+        "total_price": 120.0,
+        "package": "PACKAGE_TYPE_BAG"
+      },
       "properties": {
         "orderId": {
           "type": "string",
@@ -434,6 +435,11 @@
     },
     "ordersOrderHistory": {
       "type": "object",
+      "example": {
+        "order_id": "1",
+        "status": "ORDER_STATUS_ACCEPTED",
+        "created_at": "2025-12-03T14:20:00Z"
+      },
       "properties": {
         "orderId": {
           "type": "string",
@@ -450,6 +456,15 @@
     },
     "ordersOrderHistoryList": {
       "type": "object",
+      "example": {
+        "history": [
+          {
+            "order_id": "1",
+            "status": "ORDER_STATUS_ACCEPTED",
+            "created_at": "2025-12-03T14:20:00Z"
+          }
+        ]
+      },
       "properties": {
         "history": {
           "type": "array",
@@ -462,6 +477,10 @@
     },
     "ordersOrderResponse": {
       "type": "object",
+      "example": {
+        "status": "ORDER_STATUS_ACCEPTED",
+        "order_id": "12345"
+      },
       "properties": {
         "status": {
           "$ref": "#/definitions/ordersOrderStatus"
@@ -485,6 +504,20 @@
     },
     "ordersOrdersList": {
       "type": "object",
+      "example": {
+        "orders": [
+          {
+            "order_id": "1",
+            "user_id": "123",
+            "status": "ORDER_STATUS_EXPECTS",
+            "expires_at": "2025-12-05T10:00:00Z",
+            "weight": 1.5,
+            "total_price": 120.0,
+            "package": "PACKAGE_TYPE_BOX"
+          }
+        ],
+        "total": 100
+      },
       "properties": {
         "orders": {
           "type": "array",
@@ -513,6 +546,10 @@
     },
     "ordersPagination": {
       "type": "object",
+      "example": {
+        "page": 1,
+        "count_on_page": 20
+      },
       "properties": {
         "page": {
           "type": "integer",
@@ -526,6 +563,15 @@
     },
     "ordersProcessOrdersRequest": {
       "type": "object",
+      "example": {
+        "user_id": "123",
+        "action": "ACTION_TYPE_ISSUE",
+        "order_ids": [
+          "1",
+          "2",
+          "3"
+        ]
+      },
       "properties": {
         "userId": {
           "type": "string",
@@ -545,6 +591,15 @@
     },
     "ordersProcessResult": {
       "type": "object",
+      "example": {
+        "processed": [
+          "1",
+          "2"
+        ],
+        "errors": [
+          "3"
+        ]
+      },
       "properties": {
         "processed": {
           "type": "array",
@@ -562,14 +617,45 @@
         }
       }
     },
+    "ordersReturnRecord": {
+      "type": "object",
+      "example": {
+        "order_id": "1",
+        "user_id": "123",
+        "returned_at": "2025-12-01T13:45:00Z"
+      },
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "userId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "returnedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "ordersReturnsList": {
       "type": "object",
+      "example": {
+        "returns": [
+          {
+            "order_id": "1",
+            "user_id": "123",
+            "returned_at": "2025-12-01T13:45:00Z"
+          }
+        ]
+      },
       "properties": {
         "returns": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/ordersOrder"
+            "$ref": "#/definitions/ordersReturnRecord"
           }
         }
       }

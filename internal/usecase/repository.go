@@ -29,7 +29,7 @@ type Repository interface {
 	ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, error)
 
 	// History возвращает историю изменений заказов.
-	History() ([]*models.HistoryEvent, error)
+	History(pg vo.Pagination) ([]*models.HistoryEvent, int, error)
 
 	// ImportMany импортирует список заказов из внешнего файла в хранилище. Возвращает ошибку при попытке вставить дубликат.
 	ImportMany(orders []*models.Order) error

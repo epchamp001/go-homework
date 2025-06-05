@@ -280,50 +280,6 @@ func (x *ListOrdersRequest) GetPagination() *Pagination {
 	return nil
 }
 
-type ListReturnsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Pagination    *Pagination            `protobuf:"bytes,1,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListReturnsRequest) Reset() {
-	*x = ListReturnsRequest{}
-	mi := &file_pvz_order_service_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListReturnsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListReturnsRequest) ProtoMessage() {}
-
-func (x *ListReturnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListReturnsRequest.ProtoReflect.Descriptor instead.
-func (*ListReturnsRequest) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *ListReturnsRequest) GetPagination() *Pagination {
-	if x != nil {
-		return x.Pagination
-	}
-	return nil
-}
-
 type ImportOrdersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Orders        []*AcceptOrderRequest  `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
@@ -333,7 +289,7 @@ type ImportOrdersRequest struct {
 
 func (x *ImportOrdersRequest) Reset() {
 	*x = ImportOrdersRequest{}
-	mi := &file_pvz_order_service_proto_msgTypes[5]
+	mi := &file_pvz_order_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -345,7 +301,7 @@ func (x *ImportOrdersRequest) String() string {
 func (*ImportOrdersRequest) ProtoMessage() {}
 
 func (x *ImportOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[5]
+	mi := &file_pvz_order_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -358,7 +314,7 @@ func (x *ImportOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportOrdersRequest.ProtoReflect.Descriptor instead.
 func (*ImportOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{5}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ImportOrdersRequest) GetOrders() []*AcceptOrderRequest {
@@ -377,7 +333,7 @@ type GetHistoryRequest struct {
 
 func (x *GetHistoryRequest) Reset() {
 	*x = GetHistoryRequest{}
-	mi := &file_pvz_order_service_proto_msgTypes[6]
+	mi := &file_pvz_order_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -389,7 +345,7 @@ func (x *GetHistoryRequest) String() string {
 func (*GetHistoryRequest) ProtoMessage() {}
 
 func (x *GetHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[6]
+	mi := &file_pvz_order_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -402,7 +358,7 @@ func (x *GetHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetHistoryRequest.ProtoReflect.Descriptor instead.
 func (*GetHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{6}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetHistoryRequest) GetPagination() *Pagination {
@@ -410,50 +366,6 @@ func (x *GetHistoryRequest) GetPagination() *Pagination {
 		return x.Pagination
 	}
 	return nil
-}
-
-type DownloadClientReportRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SortBy        string                 `protobuf:"bytes,1,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DownloadClientReportRequest) Reset() {
-	*x = DownloadClientReportRequest{}
-	mi := &file_pvz_order_service_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DownloadClientReportRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DownloadClientReportRequest) ProtoMessage() {}
-
-func (x *DownloadClientReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DownloadClientReportRequest.ProtoReflect.Descriptor instead.
-func (*DownloadClientReportRequest) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *DownloadClientReportRequest) GetSortBy() string {
-	if x != nil {
-		return x.SortBy
-	}
-	return ""
 }
 
 type OrderResponse struct {
@@ -466,7 +378,7 @@ type OrderResponse struct {
 
 func (x *OrderResponse) Reset() {
 	*x = OrderResponse{}
-	mi := &file_pvz_order_service_proto_msgTypes[8]
+	mi := &file_pvz_order_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -478,7 +390,7 @@ func (x *OrderResponse) String() string {
 func (*OrderResponse) ProtoMessage() {}
 
 func (x *OrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[8]
+	mi := &file_pvz_order_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -491,7 +403,7 @@ func (x *OrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrderResponse.ProtoReflect.Descriptor instead.
 func (*OrderResponse) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{8}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *OrderResponse) GetStatus() OrderStatus {
@@ -518,7 +430,7 @@ type ProcessResult struct {
 
 func (x *ProcessResult) Reset() {
 	*x = ProcessResult{}
-	mi := &file_pvz_order_service_proto_msgTypes[9]
+	mi := &file_pvz_order_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -530,7 +442,7 @@ func (x *ProcessResult) String() string {
 func (*ProcessResult) ProtoMessage() {}
 
 func (x *ProcessResult) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[9]
+	mi := &file_pvz_order_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -543,7 +455,7 @@ func (x *ProcessResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessResult.ProtoReflect.Descriptor instead.
 func (*ProcessResult) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{9}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ProcessResult) GetProcessed() []uint64 {
@@ -570,7 +482,7 @@ type OrdersList struct {
 
 func (x *OrdersList) Reset() {
 	*x = OrdersList{}
-	mi := &file_pvz_order_service_proto_msgTypes[10]
+	mi := &file_pvz_order_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +494,7 @@ func (x *OrdersList) String() string {
 func (*OrdersList) ProtoMessage() {}
 
 func (x *OrdersList) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[10]
+	mi := &file_pvz_order_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +507,7 @@ func (x *OrdersList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrdersList.ProtoReflect.Descriptor instead.
 func (*OrdersList) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{10}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *OrdersList) GetOrders() []*Order {
@@ -612,50 +524,6 @@ func (x *OrdersList) GetTotal() int32 {
 	return 0
 }
 
-type ReturnsList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Returns       []*Order               `protobuf:"bytes,1,rep,name=returns,proto3" json:"returns,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ReturnsList) Reset() {
-	*x = ReturnsList{}
-	mi := &file_pvz_order_service_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ReturnsList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ReturnsList) ProtoMessage() {}
-
-func (x *ReturnsList) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ReturnsList.ProtoReflect.Descriptor instead.
-func (*ReturnsList) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *ReturnsList) GetReturns() []*Order {
-	if x != nil {
-		return x.Returns
-	}
-	return nil
-}
-
 type OrderHistoryList struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	History       []*OrderHistory        `protobuf:"bytes,1,rep,name=history,proto3" json:"history,omitempty"`
@@ -665,7 +533,7 @@ type OrderHistoryList struct {
 
 func (x *OrderHistoryList) Reset() {
 	*x = OrderHistoryList{}
-	mi := &file_pvz_order_service_proto_msgTypes[12]
+	mi := &file_pvz_order_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -677,7 +545,7 @@ func (x *OrderHistoryList) String() string {
 func (*OrderHistoryList) ProtoMessage() {}
 
 func (x *OrderHistoryList) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[12]
+	mi := &file_pvz_order_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -690,7 +558,7 @@ func (x *OrderHistoryList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrderHistoryList.ProtoReflect.Descriptor instead.
 func (*OrderHistoryList) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{12}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *OrderHistoryList) GetHistory() []*OrderHistory {
@@ -710,7 +578,7 @@ type ImportResult struct {
 
 func (x *ImportResult) Reset() {
 	*x = ImportResult{}
-	mi := &file_pvz_order_service_proto_msgTypes[13]
+	mi := &file_pvz_order_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -722,7 +590,7 @@ func (x *ImportResult) String() string {
 func (*ImportResult) ProtoMessage() {}
 
 func (x *ImportResult) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[13]
+	mi := &file_pvz_order_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -735,7 +603,7 @@ func (x *ImportResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportResult.ProtoReflect.Descriptor instead.
 func (*ImportResult) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{13}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ImportResult) GetImported() int32 {
@@ -748,50 +616,6 @@ func (x *ImportResult) GetImported() int32 {
 func (x *ImportResult) GetErrors() []uint64 {
 	if x != nil {
 		return x.Errors
-	}
-	return nil
-}
-
-type DownloadClientReportResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Report        []byte                 `protobuf:"bytes,1,opt,name=report,proto3" json:"report,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DownloadClientReportResponse) Reset() {
-	*x = DownloadClientReportResponse{}
-	mi := &file_pvz_order_service_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DownloadClientReportResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DownloadClientReportResponse) ProtoMessage() {}
-
-func (x *DownloadClientReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DownloadClientReportResponse.ProtoReflect.Descriptor instead.
-func (*DownloadClientReportResponse) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *DownloadClientReportResponse) GetReport() []byte {
-	if x != nil {
-		return x.Report
 	}
 	return nil
 }
@@ -811,7 +635,7 @@ type Order struct {
 
 func (x *Order) Reset() {
 	*x = Order{}
-	mi := &file_pvz_order_service_proto_msgTypes[15]
+	mi := &file_pvz_order_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -823,7 +647,7 @@ func (x *Order) String() string {
 func (*Order) ProtoMessage() {}
 
 func (x *Order) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[15]
+	mi := &file_pvz_order_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -836,7 +660,7 @@ func (x *Order) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Order.ProtoReflect.Descriptor instead.
 func (*Order) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{15}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Order) GetOrderId() uint64 {
@@ -899,7 +723,7 @@ type OrderHistory struct {
 
 func (x *OrderHistory) Reset() {
 	*x = OrderHistory{}
-	mi := &file_pvz_order_service_proto_msgTypes[16]
+	mi := &file_pvz_order_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -911,7 +735,7 @@ func (x *OrderHistory) String() string {
 func (*OrderHistory) ProtoMessage() {}
 
 func (x *OrderHistory) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[16]
+	mi := &file_pvz_order_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -924,7 +748,7 @@ func (x *OrderHistory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrderHistory.ProtoReflect.Descriptor instead.
 func (*OrderHistory) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{16}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *OrderHistory) GetOrderId() uint64 {
@@ -958,7 +782,7 @@ type Pagination struct {
 
 func (x *Pagination) Reset() {
 	*x = Pagination{}
-	mi := &file_pvz_order_service_proto_msgTypes[17]
+	mi := &file_pvz_order_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -970,7 +794,7 @@ func (x *Pagination) String() string {
 func (*Pagination) ProtoMessage() {}
 
 func (x *Pagination) ProtoReflect() protoreflect.Message {
-	mi := &file_pvz_order_service_proto_msgTypes[17]
+	mi := &file_pvz_order_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -983,7 +807,7 @@ func (x *Pagination) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pagination.ProtoReflect.Descriptor instead.
 func (*Pagination) Descriptor() ([]byte, []int) {
-	return file_pvz_order_service_proto_rawDescGZIP(), []int{17}
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Pagination) GetPage() uint32 {
@@ -1000,11 +824,159 @@ func (x *Pagination) GetCountOnPage() uint32 {
 	return 0
 }
 
+type ListReturnsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pagination    *Pagination            `protobuf:"bytes,1,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReturnsRequest) Reset() {
+	*x = ListReturnsRequest{}
+	mi := &file_pvz_order_service_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReturnsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReturnsRequest) ProtoMessage() {}
+
+func (x *ListReturnsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pvz_order_service_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReturnsRequest.ProtoReflect.Descriptor instead.
+func (*ListReturnsRequest) Descriptor() ([]byte, []int) {
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ListReturnsRequest) GetPagination() *Pagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+type ReturnsList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Returns       []*ReturnRecord        `protobuf:"bytes,1,rep,name=returns,proto3" json:"returns,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReturnsList) Reset() {
+	*x = ReturnsList{}
+	mi := &file_pvz_order_service_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnsList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnsList) ProtoMessage() {}
+
+func (x *ReturnsList) ProtoReflect() protoreflect.Message {
+	mi := &file_pvz_order_service_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnsList.ProtoReflect.Descriptor instead.
+func (*ReturnsList) Descriptor() ([]byte, []int) {
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ReturnsList) GetReturns() []*ReturnRecord {
+	if x != nil {
+		return x.Returns
+	}
+	return nil
+}
+
+type ReturnRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderId       uint64                 `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	UserId        uint64                 `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ReturnedAt    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=returned_at,json=returnedAt,proto3" json:"returned_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReturnRecord) Reset() {
+	*x = ReturnRecord{}
+	mi := &file_pvz_order_service_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnRecord) ProtoMessage() {}
+
+func (x *ReturnRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_pvz_order_service_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnRecord.ProtoReflect.Descriptor instead.
+func (*ReturnRecord) Descriptor() ([]byte, []int) {
+	return file_pvz_order_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ReturnRecord) GetOrderId() uint64 {
+	if x != nil {
+		return x.OrderId
+	}
+	return 0
+}
+
+func (x *ReturnRecord) GetUserId() uint64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *ReturnRecord) GetReturnedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReturnedAt
+	}
+	return nil
+}
+
 var File_pvz_order_service_proto protoreflect.FileDescriptor
 
 const file_pvz_order_service_proto_rawDesc = "" +
 	"\n" +
-	"\x17pvz/order_service.proto\x12\x06orders\x1a\x15pvz/order_types.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"\xf1\x01\n" +
+	"\x17pvz/order_service.proto\x12\x06orders\x1a\x15pvz/order_types.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"\x80\x03\n" +
 	"\x12AcceptOrderRequest\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\x04R\aorderId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x04R\x06userId\x129\n" +
@@ -1012,57 +984,57 @@ const file_pvz_order_service_proto_rawDesc = "" +
 	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x122\n" +
 	"\apackage\x18\x04 \x01(\x0e2\x13.orders.PackageTypeH\x00R\apackage\x88\x01\x01\x12\x16\n" +
 	"\x06weight\x18\x05 \x01(\x02R\x06weight\x12\x14\n" +
-	"\x05price\x18\x06 \x01(\x02R\x05priceB\n" +
+	"\x05price\x18\x06 \x01(\x02R\x05price:\x8c\x01\x92A\x88\x01\n" +
+	"\x85\x01J\x82\x01{\"order_id\":\"12345\",\"user_id\":\"67890\",\"expires_at\":\"2025-12-31T12:00:00Z\",\"package\":\"PACKAGE_TYPE_BOX\",\"weight\":1.5,\"price\":100.0}B\n" +
 	"\n" +
-	"\b_package\"+\n" +
+	"\b_package\"H\n" +
 	"\x0eOrderIdRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\x04R\aorderId\"x\n" +
+	"\border_id\x18\x01 \x01(\x04R\aorderId:\x1b\x92A\x18\n" +
+	"\x16J\x14{\"order_id\":\"12345\"}\"\xc9\x01\n" +
 	"\x14ProcessOrdersRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12*\n" +
 	"\x06action\x18\x02 \x01(\x0e2\x12.orders.ActionTypeR\x06action\x12\x1b\n" +
-	"\torder_ids\x18\x03 \x03(\x04R\borderIds\"\xb2\x01\n" +
+	"\torder_ids\x18\x03 \x03(\x04R\borderIds:O\x92AL\n" +
+	"JJH{\"user_id\":\"123\",\"action\":\"ACTION_TYPE_ISSUE\",\"order_ids\":[\"1\",\"2\",\"3\"]}\"\x91\x02\n" +
 	"\x11ListOrdersRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12\x15\n" +
 	"\x06in_pvz\x18\x02 \x01(\bR\x05inPvz\x12\x1a\n" +
 	"\x06last_n\x18\x03 \x01(\rH\x00R\x05lastN\x88\x01\x01\x127\n" +
 	"\n" +
 	"pagination\x18\x04 \x01(\v2\x12.orders.PaginationH\x01R\n" +
-	"pagination\x88\x01\x01B\t\n" +
+	"pagination\x88\x01\x01:]\x92AZ\n" +
+	"XJV{\"user_id\":\"123\",\"in_pvz\":true,\"last_n\":10,\"pagination\":{\"page\":1,\"count_on_page\":20}}B\t\n" +
 	"\a_last_nB\r\n" +
-	"\v_pagination\"\\\n" +
-	"\x12ListReturnsRequest\x127\n" +
-	"\n" +
-	"pagination\x18\x01 \x01(\v2\x12.orders.PaginationH\x00R\n" +
-	"pagination\x88\x01\x01B\r\n" +
-	"\v_pagination\"I\n" +
+	"\v_pagination\"\xdf\x02\n" +
 	"\x13ImportOrdersRequest\x122\n" +
-	"\x06orders\x18\x01 \x03(\v2\x1a.orders.AcceptOrderRequestR\x06orders\"[\n" +
+	"\x06orders\x18\x01 \x03(\v2\x1a.orders.AcceptOrderRequestR\x06orders:\x93\x02\x92A\x8f\x02\n" +
+	"\x8c\x02J\x89\x02{\"orders\":[{\"order_id\":\"100\",\"user_id\":\"200\",\"expires_at\":\"2025-12-15T10:00:00Z\",\"package\":\"PACKAGE_TYPE_BAG\",\"weight\":1.0,\"price\":50.0},{\"order_id\":\"101\",\"user_id\":\"201\",\"expires_at\":\"2025-11-30T15:00:00Z\",\"package\":\"PACKAGE_TYPE_BOX\",\"weight\":2.0,\"price\":150.0}]}\"\x90\x01\n" +
 	"\x11GetHistoryRequest\x127\n" +
 	"\n" +
 	"pagination\x18\x01 \x01(\v2\x12.orders.PaginationH\x00R\n" +
-	"pagination\x88\x01\x01B\r\n" +
-	"\v_pagination\"6\n" +
-	"\x1bDownloadClientReportRequest\x12\x17\n" +
-	"\asort_by\x18\x01 \x01(\tR\x06sortBy\"W\n" +
+	"pagination\x88\x01\x01:3\x92A0\n" +
+	".J,{\"pagination\":{\"page\":1,\"count_on_page\":50}}B\r\n" +
+	"\v_pagination\"\x95\x01\n" +
 	"\rOrderResponse\x12+\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x13.orders.OrderStatusR\x06status\x12\x19\n" +
-	"\border_id\x18\x02 \x01(\x04R\aorderId\"E\n" +
+	"\border_id\x18\x02 \x01(\x04R\aorderId:<\x92A9\n" +
+	"7J5{\"status\":\"ORDER_STATUS_ACCEPTED\",\"order_id\":\"12345\"}\"t\n" +
 	"\rProcessResult\x12\x1c\n" +
 	"\tprocessed\x18\x01 \x03(\x04R\tprocessed\x12\x16\n" +
-	"\x06errors\x18\x02 \x03(\x04R\x06errors\"I\n" +
+	"\x06errors\x18\x02 \x03(\x04R\x06errors:-\x92A*\n" +
+	"(J&{\"processed\":[\"1\",\"2\"],\"errors\":[\"3\"]}\"\x91\x02\n" +
 	"\n" +
 	"OrdersList\x12%\n" +
 	"\x06orders\x18\x01 \x03(\v2\r.orders.OrderR\x06orders\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total\"6\n" +
-	"\vReturnsList\x12'\n" +
-	"\areturns\x18\x01 \x03(\v2\r.orders.OrderR\areturns\"B\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total:\xc5\x01\x92A\xc1\x01\n" +
+	"\xbe\x01J\xbb\x01{\"orders\":[{\"order_id\":\"1\",\"user_id\":\"123\",\"status\":\"ORDER_STATUS_EXPECTS\",\"expires_at\":\"2025-12-05T10:00:00Z\",\"weight\":1.5,\"total_price\":120.0,\"package\":\"PACKAGE_TYPE_BOX\"}],\"total\":100}\"\xae\x01\n" +
 	"\x10OrderHistoryList\x12.\n" +
-	"\ahistory\x18\x01 \x03(\v2\x14.orders.OrderHistoryR\ahistory\"B\n" +
+	"\ahistory\x18\x01 \x03(\v2\x14.orders.OrderHistoryR\ahistory:j\x92Ag\n" +
+	"eJc{\"history\":[{\"order_id\":\"1\",\"status\":\"ORDER_STATUS_ACCEPTED\",\"created_at\":\"2025-12-03T14:20:00Z\"}]}\"e\n" +
 	"\fImportResult\x12\x1a\n" +
 	"\bimported\x18\x01 \x01(\x05R\bimported\x12\x16\n" +
-	"\x06errors\x18\x02 \x03(\x04R\x06errors\"6\n" +
-	"\x1cDownloadClientReportResponse\x12\x16\n" +
-	"\x06report\x18\x01 \x01(\fR\x06report\"\x9c\x02\n" +
+	"\x06errors\x18\x02 \x03(\x04R\x06errors:!\x92A\x1e\n" +
+	"\x1cJ\x1a{\"imported\":2,\"errors\":[]}\"\xcc\x03\n" +
 	"\x05Order\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\x04R\aorderId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x04R\x06userId\x12+\n" +
@@ -1072,18 +1044,36 @@ const file_pvz_order_service_proto_rawDesc = "" +
 	"\x06weight\x18\x05 \x01(\x02R\x06weight\x12\x1f\n" +
 	"\vtotal_price\x18\x06 \x01(\x02R\n" +
 	"totalPrice\x122\n" +
-	"\apackage\x18\a \x01(\x0e2\x13.orders.PackageTypeH\x00R\apackage\x88\x01\x01B\n" +
+	"\apackage\x18\a \x01(\x0e2\x13.orders.PackageTypeH\x00R\apackage\x88\x01\x01:\xad\x01\x92A\xa9\x01\n" +
+	"\xa6\x01J\xa3\x01{\"order_id\":\"1\",\"user_id\":\"123\",\"status\":\"ORDER_STATUS_ACCEPTED\",\"expires_at\":\"2025-12-05T10:00:00Z\",\"weight\":1.5,\"total_price\":120.0,\"package\":\"PACKAGE_TYPE_BAG\"}B\n" +
 	"\n" +
-	"\b_package\"\x91\x01\n" +
+	"\b_package\"\xef\x01\n" +
 	"\fOrderHistory\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\x04R\aorderId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.orders.OrderStatusR\x06status\x129\n" +
 	"\n" +
-	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"D\n" +
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt:\\\x92AY\n" +
+	"WJU{\"order_id\":\"1\",\"status\":\"ORDER_STATUS_ACCEPTED\",\"created_at\":\"2025-12-03T14:20:00Z\"}\"j\n" +
 	"\n" +
 	"Pagination\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\rR\x04page\x12\"\n" +
-	"\rcount_on_page\x18\x02 \x01(\rR\vcountOnPage2\xa5\x06\n" +
+	"\rcount_on_page\x18\x02 \x01(\rR\vcountOnPage:$\x92A!\n" +
+	"\x1fJ\x1d{\"page\":1,\"count_on_page\":20}\"\x91\x01\n" +
+	"\x12ListReturnsRequest\x127\n" +
+	"\n" +
+	"pagination\x18\x01 \x01(\v2\x12.orders.PaginationH\x00R\n" +
+	"pagination\x88\x01\x01:3\x92A0\n" +
+	".J,{\"pagination\":{\"page\":1,\"count_on_page\":20}}B\r\n" +
+	"\v_pagination\"\x99\x01\n" +
+	"\vReturnsList\x12.\n" +
+	"\areturns\x18\x01 \x03(\v2\x14.orders.ReturnRecordR\areturns:Z\x92AW\n" +
+	"UJS{\"returns\":[{\"order_id\":\"1\",\"user_id\":\"123\",\"returned_at\":\"2025-12-01T13:45:00Z\"}]}\"\xcd\x01\n" +
+	"\fReturnRecord\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\x04R\aorderId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x04R\x06userId\x12;\n" +
+	"\vreturned_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"returnedAt:L\x92AI\n" +
+	"GJE{\"order_id\":\"1\",\"user_id\":\"123\",\"returned_at\":\"2025-12-01T13:45:00Z\"}2\xa5\x05\n" +
 	"\rOrdersService\x12^\n" +
 	"\vAcceptOrder\x12\x1a.orders.AcceptOrderRequest\x1a\x15.orders.OrderResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/orders/accept\x12b\n" +
 	"\vReturnOrder\x12\x16.orders.OrderIdRequest\x1a\x15.orders.OrderResponse\"$\x82\xd3\xe4\x93\x02\x1e\"\x1c/v1/orders/{order_id}/return\x12c\n" +
@@ -1094,8 +1084,7 @@ const file_pvz_order_service_proto_rawDesc = "" +
 	"\vListReturns\x12\x1a.orders.ListReturnsRequest\x1a\x13.orders.ReturnsList\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/orders/returns\x12]\n" +
 	"\n" +
 	"GetHistory\x12\x19.orders.GetHistoryRequest\x1a\x18.orders.OrderHistoryList\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/orders/history\x12_\n" +
-	"\fImportOrders\x12\x1b.orders.ImportOrdersRequest\x1a\x14.orders.ImportResult\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/orders/import\x12~\n" +
-	"\x14DownloadClientReport\x12#.orders.DownloadClientReportRequest\x1a$.orders.DownloadClientReportResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/reports/clientsB\x8f\x02\x92A\xf8\x01\x12\xbe\x01\n" +
+	"\fImportOrders\x12\x1b.orders.ImportOrdersRequest\x1a\x14.orders.ImportResult\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/orders/importB\x8f\x02\x92A\xf8\x01\x12\xbe\x01\n" +
 	"\x13Order Pick-Up Point\x12]API для управления процессами Пункта Выдачи Заказов\"C\n" +
 	"\fEgor Ponyaev\x12\x1dhttps://github.com/epchamp001\x1a\x14epchamp001@gmail.com2\x031.0\x1a\x0elocalhost:8080*\x01\x012\x10application/json:\x10application/jsonZ\x11api/pkg/pvz;pvzpbb\x06proto3"
 
@@ -1111,69 +1100,67 @@ func file_pvz_order_service_proto_rawDescGZIP() []byte {
 	return file_pvz_order_service_proto_rawDescData
 }
 
-var file_pvz_order_service_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_pvz_order_service_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_pvz_order_service_proto_goTypes = []any{
-	(*AcceptOrderRequest)(nil),           // 0: orders.AcceptOrderRequest
-	(*OrderIdRequest)(nil),               // 1: orders.OrderIdRequest
-	(*ProcessOrdersRequest)(nil),         // 2: orders.ProcessOrdersRequest
-	(*ListOrdersRequest)(nil),            // 3: orders.ListOrdersRequest
-	(*ListReturnsRequest)(nil),           // 4: orders.ListReturnsRequest
-	(*ImportOrdersRequest)(nil),          // 5: orders.ImportOrdersRequest
-	(*GetHistoryRequest)(nil),            // 6: orders.GetHistoryRequest
-	(*DownloadClientReportRequest)(nil),  // 7: orders.DownloadClientReportRequest
-	(*OrderResponse)(nil),                // 8: orders.OrderResponse
-	(*ProcessResult)(nil),                // 9: orders.ProcessResult
-	(*OrdersList)(nil),                   // 10: orders.OrdersList
-	(*ReturnsList)(nil),                  // 11: orders.ReturnsList
-	(*OrderHistoryList)(nil),             // 12: orders.OrderHistoryList
-	(*ImportResult)(nil),                 // 13: orders.ImportResult
-	(*DownloadClientReportResponse)(nil), // 14: orders.DownloadClientReportResponse
-	(*Order)(nil),                        // 15: orders.Order
-	(*OrderHistory)(nil),                 // 16: orders.OrderHistory
-	(*Pagination)(nil),                   // 17: orders.Pagination
-	(*timestamppb.Timestamp)(nil),        // 18: google.protobuf.Timestamp
-	(PackageType)(0),                     // 19: orders.PackageType
-	(ActionType)(0),                      // 20: orders.ActionType
-	(OrderStatus)(0),                     // 21: orders.OrderStatus
+	(*AcceptOrderRequest)(nil),    // 0: orders.AcceptOrderRequest
+	(*OrderIdRequest)(nil),        // 1: orders.OrderIdRequest
+	(*ProcessOrdersRequest)(nil),  // 2: orders.ProcessOrdersRequest
+	(*ListOrdersRequest)(nil),     // 3: orders.ListOrdersRequest
+	(*ImportOrdersRequest)(nil),   // 4: orders.ImportOrdersRequest
+	(*GetHistoryRequest)(nil),     // 5: orders.GetHistoryRequest
+	(*OrderResponse)(nil),         // 6: orders.OrderResponse
+	(*ProcessResult)(nil),         // 7: orders.ProcessResult
+	(*OrdersList)(nil),            // 8: orders.OrdersList
+	(*OrderHistoryList)(nil),      // 9: orders.OrderHistoryList
+	(*ImportResult)(nil),          // 10: orders.ImportResult
+	(*Order)(nil),                 // 11: orders.Order
+	(*OrderHistory)(nil),          // 12: orders.OrderHistory
+	(*Pagination)(nil),            // 13: orders.Pagination
+	(*ListReturnsRequest)(nil),    // 14: orders.ListReturnsRequest
+	(*ReturnsList)(nil),           // 15: orders.ReturnsList
+	(*ReturnRecord)(nil),          // 16: orders.ReturnRecord
+	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
+	(PackageType)(0),              // 18: orders.PackageType
+	(ActionType)(0),               // 19: orders.ActionType
+	(OrderStatus)(0),              // 20: orders.OrderStatus
 }
 var file_pvz_order_service_proto_depIdxs = []int32{
-	18, // 0: orders.AcceptOrderRequest.expires_at:type_name -> google.protobuf.Timestamp
-	19, // 1: orders.AcceptOrderRequest.package:type_name -> orders.PackageType
-	20, // 2: orders.ProcessOrdersRequest.action:type_name -> orders.ActionType
-	17, // 3: orders.ListOrdersRequest.pagination:type_name -> orders.Pagination
-	17, // 4: orders.ListReturnsRequest.pagination:type_name -> orders.Pagination
-	0,  // 5: orders.ImportOrdersRequest.orders:type_name -> orders.AcceptOrderRequest
-	17, // 6: orders.GetHistoryRequest.pagination:type_name -> orders.Pagination
-	21, // 7: orders.OrderResponse.status:type_name -> orders.OrderStatus
-	15, // 8: orders.OrdersList.orders:type_name -> orders.Order
-	15, // 9: orders.ReturnsList.returns:type_name -> orders.Order
-	16, // 10: orders.OrderHistoryList.history:type_name -> orders.OrderHistory
-	21, // 11: orders.Order.status:type_name -> orders.OrderStatus
-	18, // 12: orders.Order.expires_at:type_name -> google.protobuf.Timestamp
-	19, // 13: orders.Order.package:type_name -> orders.PackageType
-	21, // 14: orders.OrderHistory.status:type_name -> orders.OrderStatus
-	18, // 15: orders.OrderHistory.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 16: orders.OrdersService.AcceptOrder:input_type -> orders.AcceptOrderRequest
-	1,  // 17: orders.OrdersService.ReturnOrder:input_type -> orders.OrderIdRequest
-	2,  // 18: orders.OrdersService.ProcessOrders:input_type -> orders.ProcessOrdersRequest
-	3,  // 19: orders.OrdersService.ListOrders:input_type -> orders.ListOrdersRequest
-	4,  // 20: orders.OrdersService.ListReturns:input_type -> orders.ListReturnsRequest
-	6,  // 21: orders.OrdersService.GetHistory:input_type -> orders.GetHistoryRequest
-	5,  // 22: orders.OrdersService.ImportOrders:input_type -> orders.ImportOrdersRequest
-	7,  // 23: orders.OrdersService.DownloadClientReport:input_type -> orders.DownloadClientReportRequest
-	8,  // 24: orders.OrdersService.AcceptOrder:output_type -> orders.OrderResponse
-	8,  // 25: orders.OrdersService.ReturnOrder:output_type -> orders.OrderResponse
-	9,  // 26: orders.OrdersService.ProcessOrders:output_type -> orders.ProcessResult
-	10, // 27: orders.OrdersService.ListOrders:output_type -> orders.OrdersList
-	11, // 28: orders.OrdersService.ListReturns:output_type -> orders.ReturnsList
-	12, // 29: orders.OrdersService.GetHistory:output_type -> orders.OrderHistoryList
-	13, // 30: orders.OrdersService.ImportOrders:output_type -> orders.ImportResult
-	14, // 31: orders.OrdersService.DownloadClientReport:output_type -> orders.DownloadClientReportResponse
-	24, // [24:32] is the sub-list for method output_type
-	16, // [16:24] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	17, // 0: orders.AcceptOrderRequest.expires_at:type_name -> google.protobuf.Timestamp
+	18, // 1: orders.AcceptOrderRequest.package:type_name -> orders.PackageType
+	19, // 2: orders.ProcessOrdersRequest.action:type_name -> orders.ActionType
+	13, // 3: orders.ListOrdersRequest.pagination:type_name -> orders.Pagination
+	0,  // 4: orders.ImportOrdersRequest.orders:type_name -> orders.AcceptOrderRequest
+	13, // 5: orders.GetHistoryRequest.pagination:type_name -> orders.Pagination
+	20, // 6: orders.OrderResponse.status:type_name -> orders.OrderStatus
+	11, // 7: orders.OrdersList.orders:type_name -> orders.Order
+	12, // 8: orders.OrderHistoryList.history:type_name -> orders.OrderHistory
+	20, // 9: orders.Order.status:type_name -> orders.OrderStatus
+	17, // 10: orders.Order.expires_at:type_name -> google.protobuf.Timestamp
+	18, // 11: orders.Order.package:type_name -> orders.PackageType
+	20, // 12: orders.OrderHistory.status:type_name -> orders.OrderStatus
+	17, // 13: orders.OrderHistory.created_at:type_name -> google.protobuf.Timestamp
+	13, // 14: orders.ListReturnsRequest.pagination:type_name -> orders.Pagination
+	16, // 15: orders.ReturnsList.returns:type_name -> orders.ReturnRecord
+	17, // 16: orders.ReturnRecord.returned_at:type_name -> google.protobuf.Timestamp
+	0,  // 17: orders.OrdersService.AcceptOrder:input_type -> orders.AcceptOrderRequest
+	1,  // 18: orders.OrdersService.ReturnOrder:input_type -> orders.OrderIdRequest
+	2,  // 19: orders.OrdersService.ProcessOrders:input_type -> orders.ProcessOrdersRequest
+	3,  // 20: orders.OrdersService.ListOrders:input_type -> orders.ListOrdersRequest
+	14, // 21: orders.OrdersService.ListReturns:input_type -> orders.ListReturnsRequest
+	5,  // 22: orders.OrdersService.GetHistory:input_type -> orders.GetHistoryRequest
+	4,  // 23: orders.OrdersService.ImportOrders:input_type -> orders.ImportOrdersRequest
+	6,  // 24: orders.OrdersService.AcceptOrder:output_type -> orders.OrderResponse
+	6,  // 25: orders.OrdersService.ReturnOrder:output_type -> orders.OrderResponse
+	7,  // 26: orders.OrdersService.ProcessOrders:output_type -> orders.ProcessResult
+	8,  // 27: orders.OrdersService.ListOrders:output_type -> orders.OrdersList
+	15, // 28: orders.OrdersService.ListReturns:output_type -> orders.ReturnsList
+	9,  // 29: orders.OrdersService.GetHistory:output_type -> orders.OrderHistoryList
+	10, // 30: orders.OrdersService.ImportOrders:output_type -> orders.ImportResult
+	24, // [24:31] is the sub-list for method output_type
+	17, // [17:24] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_pvz_order_service_proto_init() }
@@ -1184,16 +1171,16 @@ func file_pvz_order_service_proto_init() {
 	file_pvz_order_types_proto_init()
 	file_pvz_order_service_proto_msgTypes[0].OneofWrappers = []any{}
 	file_pvz_order_service_proto_msgTypes[3].OneofWrappers = []any{}
-	file_pvz_order_service_proto_msgTypes[4].OneofWrappers = []any{}
-	file_pvz_order_service_proto_msgTypes[6].OneofWrappers = []any{}
-	file_pvz_order_service_proto_msgTypes[15].OneofWrappers = []any{}
+	file_pvz_order_service_proto_msgTypes[5].OneofWrappers = []any{}
+	file_pvz_order_service_proto_msgTypes[11].OneofWrappers = []any{}
+	file_pvz_order_service_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pvz_order_service_proto_rawDesc), len(file_pvz_order_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

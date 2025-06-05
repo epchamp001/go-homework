@@ -2,18 +2,14 @@
 package usecase
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/xuri/excelize/v2"
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"pvz-cli/internal/usecase/packaging"
-	"pvz-cli/pkg/errs"
-
-	"github.com/xuri/excelize/v2"
 )
 
 // Service определяет бизнес-логику работы Пункта Выдачи Заказов.
@@ -40,10 +36,10 @@ type Service interface {
 	ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, error)
 
 	// OrderHistory возвращает полную историю по заказам.
-	OrderHistory() ([]*models.HistoryEvent, error)
+	OrderHistory(pg vo.Pagination) ([]*models.HistoryEvent, int, error)
 
 	// ImportOrders импортирует заказы из JSON-файла, возвращает количество успешно добавленных.
-	ImportOrders(filePath string) (imported int, err error)
+	ImportOrders(orders []*models.Order) (imported int, err error)
 
 	// GenerateClientReportByte генерирует отчет по заказам клиентов. Возвращает слайс []byte для дальнейшего преобразования в формат .xlsx
 	GenerateClientReportByte(sortBy string) ([]byte, error)
@@ -89,9 +85,9 @@ func (s *ServiceImpl) AcceptOrder(orderID, userID string, exp time.Time, weight 
 		ExpiresAt:  exp,
 		CreatedAt:  now,
 		Weight:     weight,
-		Price:      int64(price),
+		Price:      models.PriceKopecks(price),
 		TotalPrice: int64(total),
-		Package:    string(pkgType),
+		Package:    models.PackageType(pkgType),
 	}
 
 	if err := s.repo.Create(o); err != nil {
@@ -210,58 +206,15 @@ func (s *ServiceImpl) ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, err
 	return s.repo.ListReturns(pg)
 }
 
-func (s *ServiceImpl) OrderHistory() ([]*models.HistoryEvent, error) {
-	return s.repo.History()
+func (s *ServiceImpl) OrderHistory(pg vo.Pagination) ([]*models.HistoryEvent, int, error) {
+	return s.repo.History(pg)
 }
 
-func (s *ServiceImpl) ImportOrders(path string) (int, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, errs.Wrap(err, errs.CodeFileReadError, "couldn't open the file")
-	}
-	defer f.Close()
-
-	// читаю во временную структуру, чтобы не было багов с ExpiresAt
-	var raw []struct {
-		ID        string `json:"order_id"`
-		UserID    string `json:"user_id"`
-		ExpiresAt string `json:"expires_at"`
-	}
-	if err := json.NewDecoder(f).Decode(&raw); err != nil {
-		return 0, errs.Wrap(err, errs.CodeParsingError, "couldn't decode")
-	}
-
-	now := time.Now()
-	seen := make(map[string]struct{}, len(raw))
-	batch := make([]*models.Order, 0, len(raw))
-
-	for _, r := range raw {
-		if r.ID == "" || r.UserID == "" {
-			return 0, codes.ErrValidationFailed
-		}
-		if _, dup := seen[r.ID]; dup {
-			return 0, codes.ErrOrderAlreadyExists
-		}
-		seen[r.ID] = struct{}{}
-
-		exp, err := time.Parse("2006-01-02", r.ExpiresAt)
-		if err != nil || exp.Before(now) {
-			return 0, codes.ErrValidationFailed
-		}
-
-		batch = append(batch, &models.Order{
-			ID:        r.ID,
-			UserID:    r.UserID,
-			Status:    models.StatusAccepted,
-			ExpiresAt: exp,
-			CreatedAt: now,
-		})
-	}
-
-	if err := s.repo.ImportMany(batch); err != nil {
+func (s *ServiceImpl) ImportOrders(orders []*models.Order) (imported int, err error) {
+	if err := s.repo.ImportMany(orders); err != nil {
 		return 0, err
 	}
-	return len(batch), nil
+	return len(orders), nil
 }
 
 func (s *ServiceImpl) generateClientReport(sortBy string) ([]*models.ClientReport, error) {

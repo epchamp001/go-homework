@@ -3,6 +3,8 @@ package errs
 import (
 	"encoding/json"
 	"errors"
+	"google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 	"net/http"
 )
 
@@ -109,4 +111,18 @@ func (e *AppError) ToHTTPResponseBody() []byte {
 	}
 	data, _ := json.Marshal(resp)
 	return data
+}
+
+func GrpcError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var ae *AppError
+	if errors.As(err, &ae) {
+		switch ae.Code {
+		case CodeMissingParameter, CodeInvalidParameter:
+			return grpcstatus.Error(codes.InvalidArgument, ae.Error())
+		}
+	}
+	return nil
 }

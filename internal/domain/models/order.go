@@ -21,15 +21,15 @@ const (
 
 // Order представляет заказ в системе ПВЗ.
 type Order struct {
-	ID         string      `json:"order_id"`
-	UserID     string      `json:"user_id"`
-	Status     OrderStatus `json:"status"`
-	ExpiresAt  time.Time   `json:"expires_at"`
-	IssuedAt   *time.Time  `json:"issued_at,omitempty"`
-	ReturnedAt *time.Time  `json:"returned_at,omitempty"`
-	CreatedAt  time.Time   `json:"created_at"`
-	Package    string      `json:"package"`
-	Weight     float64     `json:"weight"`
-	Price      int64       `json:"price"`
-	TotalPrice int64       `json:"total_price"`
+	ID         string       `json:"order_id"`
+	UserID     string       `json:"user_id"`
+	Status     OrderStatus  `json:"status"`
+	ExpiresAt  time.Time    `json:"expires_at"`
+	IssuedAt   *time.Time   `json:"issued_at,omitempty"`
+	ReturnedAt *time.Time   `json:"returned_at,omitempty"`
+	CreatedAt  time.Time    `json:"created_at"`
+	Package    PackageType  `json:"package"`
+	Weight     float64      `json:"weight"`
+	Price      PriceKopecks `json:"price"`
+	TotalPrice int64        `json:"total_price"`
 }
