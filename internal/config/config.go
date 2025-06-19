@@ -3,48 +3,74 @@
 package config
 
 import (
+	"fmt"
 	"github.com/spf13/viper"
+	"os"
+	"strings"
 
+	"github.com/joho/godotenv"
 	"path/filepath"
+	strgCfg "pvz-cli/internal/config/storage"
 	"pvz-cli/pkg/errs"
 )
 
 // Config объединяет все конфигурации в одну структуру.
 type Config struct {
-	Logging    LoggingConfig    `mapstructure:"logging"`
-	GRPCServer GRPCServerConfig `mapstructure:"grpc_server"`
-	Gateway    GatewayConfig    `mapstructure:"gateway"`
+	Logging    LoggingConfig         `mapstructure:"logging"`
+	GRPCServer GRPCServerConfig      `mapstructure:"grpc_server"`
+	Gateway    GatewayConfig         `mapstructure:"gateway"`
+	Storage    strgCfg.StorageConfig `mapstructure:"storage"`
 }
 
 // LoadConfig загружает и распаковывает конфигурацию по указанному пути.
 //
 // Если путь содержит расширение (.yaml/.yml), используется полный путь к файлу.
 // Иначе ожидается config.{yaml,yml,json,...} внутри директории.
-func LoadConfig(configPath string) (*Config, error) {
-
-	viper := viper.New()
-
-	// Если путь содержит расширение – явно указываем полный файл:
-	if ext := filepath.Ext(configPath); ext == ".yaml" || ext == ".yml" {
-		viper.SetConfigFile(configPath)
-	} else {
-		viper.AddConfigPath(configPath)
-		viper.SetConfigName("config")
+func LoadConfig(configPath, envPath string) (*Config, error) {
+	if err := godotenv.Load(envPath); err != nil {
+		fmt.Printf("WARNING: error loading .env from %s: %v\n", envPath, err)
 	}
 
-	err := viper.ReadInConfig()
-	if err != nil {
+	v := viper.New()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	// Хелпер для биндинга
+	bind := func(key, env string) {
+		if err := v.BindEnv(key, env); err != nil {
+			fmt.Printf("WARNING: BindEnv %s -> %s failed: %v\n", key, env, err)
+		}
+	}
+
+	bind("storage.postgres.master.host", "PG_HOST")
+	bind("storage.postgres.master.port", "PG_MASTER_PORT")
+	bind("storage.postgres.database", "PG_DATABASE")
+	bind("storage.postgres.username", "PG_SUPER_USER")
+	bind("storage.postgres.password", "PG_SUPER_PASSWORD")
+
+	bind("storage.postgres.replicas[0].username", "PG_REPL_USER")
+	bind("storage.postgres.replicas[0].password", "PG_REPL_PASSWORD")
+	bind("storage.postgres.replicas[1].username", "PG_REPL_USER")
+	bind("storage.postgres.replicas[1].password", "PG_REPL_PASSWORD")
+
+	if ext := filepath.Ext(configPath); ext == ".yaml" || ext == ".yml" {
+		v.SetConfigFile(configPath)
+	} else {
+		v.AddConfigPath(configPath)
+		v.SetConfigName("config")
+		v.SetConfigType("yaml")
+	}
+	if err := v.ReadInConfig(); err != nil {
 		return nil, errs.Wrap(
 			err,
 			errs.CodeConfigError,
-			"cannot read config filerepo",
+			"cannot read config file",
 			"path", configPath,
 		)
 	}
 
-	var config Config
-	err = viper.Unmarshal(&config)
-	if err != nil {
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, errs.Wrap(
 			err,
 			errs.CodeInvalidConfiguration,
@@ -52,5 +78,11 @@ func LoadConfig(configPath string) (*Config, error) {
 		)
 	}
 
-	return &config, nil
+	if h := os.Getenv("PG_HOST"); h != "" {
+		for i := range cfg.Storage.Postgres.Replicas {
+			cfg.Storage.Postgres.Replicas[i].Host = h
+		}
+	}
+
+	return &cfg, nil
 }

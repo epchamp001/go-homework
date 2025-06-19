@@ -2,11 +2,13 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
+	"pvz-cli/pkg/errs"
+	"pvz-cli/pkg/txmanager"
 	"time"
 
 	"github.com/xuri/excelize/v2"
-	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"pvz-cli/internal/usecase/packaging"
@@ -15,68 +17,74 @@ import (
 // Service определяет бизнес-логику работы Пункта Выдачи Заказов.
 type Service interface {
 	// AcceptOrder регистрирует новый заказ и рассчитывает итоговую стоимость с учётом упаковки.
-	AcceptOrder(orderID, userID string, expires time.Time, weight float64, price models.PriceKopecks, pkgType models.PackageType) (models.PriceKopecks, error)
+	AcceptOrder(ctx context.Context, orderID, userID string, expires time.Time, weight float64, price models.PriceKopecks, pkgType models.PackageType) (models.PriceKopecks, error)
 
 	// ReturnOrder выполняет возврат заказа по его ID (если срок хранения истёк и не был выдан).
-	ReturnOrder(orderID string) error
+	ReturnOrder(ctx context.Context, orderID string) error
 
 	// IssueOrders выполняет массовую выдачу заказов клиенту.
-	IssueOrders(userID string, ids []string) (map[string]error, error)
+	IssueOrders(ctx context.Context, userID string, ids []string) (map[string]error, error)
 
 	// ReturnOrdersByClient обрабатывает массовый возврат заказов клиентом в течение 48 часов после выдачи.
-	ReturnOrdersByClient(userID string, ids []string) (map[string]error, error)
+	ReturnOrdersByClient(ctx context.Context, userID string, ids []string) (map[string]error, error)
 
-	// ListOrders возвращает заказы клиента с возможностью фильтрации, пагинации и лимита.
-	ListOrders(userID string, onlyInPVZ bool, lastN int, pg vo.Pagination) ([]*models.Order, int, error)
+	// ListOrders возвращает заказы клиента: активные и (опционально) возвращённые,
+	// с фильтрацией onlyInPVZ, lastN, или обычной пагинацией.
+	ListOrders(ctx context.Context, userID string, onlyInPVZ bool, lastN int, pg vo.Pagination) ([]*models.Order, int, error)
 
-	// ScrollOrders возвращает порцию заказов по курсору (постраничная прокрутка).
-	ScrollOrders(userID string, cursor vo.ScrollCursor) (orders []*models.Order, next vo.ScrollCursor, err error)
+	// ScrollOrders возвращает порцию заказов по курсору (key-set пагинация).
+	ScrollOrders(ctx context.Context, userID string, cursor vo.ScrollCursor) ([]*models.Order, vo.ScrollCursor, error)
 
-	// ListReturns возвращает список возвратов с пагинацией.
-	ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, error)
+	// ListReturns возвращает список возвратов (с пагинацией).
+	ListReturns(ctx context.Context, pg vo.Pagination) ([]*models.ReturnRecord, error)
 
-	// OrderHistory возвращает полную историю по заказам.
-	OrderHistory(pg vo.Pagination) ([]*models.HistoryEvent, int, error)
+	// OrderHistory возвращает историю событий по заказам (с пагинацией).
+	OrderHistory(ctx context.Context, pg vo.Pagination) ([]*models.HistoryEvent, int, error)
 
-	// ImportOrders импортирует заказы из JSON-файла, возвращает количество успешно добавленных.
-	ImportOrders(orders []*models.Order) (imported int, err error)
+	// ImportOrders импортирует пачку заказов в одну транзакцию.
+	ImportOrders(ctx context.Context, orders []*models.Order) (int, error)
 
-	// GenerateClientReportByte генерирует отчет по заказам клиентов. Возвращает слайс []byte для дальнейшего преобразования в формат .xlsx
-	GenerateClientReportByte(sortBy string) ([]byte, error)
+	// GenerateClientReportByte генерирует .xlsx-отчёт по клиентам.
+	GenerateClientReportByte(ctx context.Context, sortBy string) ([]byte, error)
 }
 
 type ServiceImpl struct {
-	repo Repository
+	tx      txmanager.TxManager
+	ordRepo OrdersRepository
+	hrRepo  HistoryAndReturnsRepository
 }
 
-func NewService(repo Repository) *ServiceImpl {
+func NewService(tx txmanager.TxManager, ordRepo OrdersRepository, hrRepo HistoryAndReturnsRepository) *ServiceImpl {
 	return &ServiceImpl{
-		repo: repo,
+		tx:      tx,
+		ordRepo: ordRepo,
+		hrRepo:  hrRepo,
 	}
 }
 
-func (s *ServiceImpl) AcceptOrder(orderID, userID string, exp time.Time, weight float64, price models.PriceKopecks, pkgType models.PackageType) (models.PriceKopecks, error) {
-	if orderID == "" || userID == "" {
-		return 0, codes.ErrValidationFailed
-	}
-	if exp.Before(time.Now()) {
-		return 0, codes.ErrValidationFailed
-	}
-	if _, err := s.repo.Get(orderID); err == nil {
-		return 0, codes.ErrOrderAlreadyExists
+func (s *ServiceImpl) AcceptOrder(
+	ctx context.Context,
+	orderID, userID string,
+	exp time.Time,
+	weight float64,
+	price models.PriceKopecks,
+	pkgType models.PackageType,
+) (models.PriceKopecks, error) {
+	// валидация входных данных
+	if err := validateAccept(orderID, userID, exp, weight); err != nil {
+		return 0, errs.Wrap(err, errs.CodeValidationError, "validation failed")
 	}
 
+	// расчёт наценки
 	strat, err := packaging.GetStrategy(pkgType)
 	if err != nil {
-		return 0, err
+		return 0, errs.Wrap(err, errs.CodeValidationError, "invalid package type")
 	}
-
 	if err := strat.Validate(weight); err != nil {
-		return 0, err
+		return 0, errs.Wrap(err, errs.CodeValidationError, "weight validation failed")
 	}
 
 	total := price + strat.Surcharge()
-
 	now := time.Now()
 	o := &models.Order{
 		ID:         orderID,
@@ -85,195 +93,415 @@ func (s *ServiceImpl) AcceptOrder(orderID, userID string, exp time.Time, weight 
 		ExpiresAt:  exp,
 		CreatedAt:  now,
 		Weight:     weight,
-		Price:      models.PriceKopecks(price),
+		Price:      price,
 		TotalPrice: int64(total),
-		Package:    models.PackageType(pkgType),
+		Package:    pkgType,
 	}
 
-	if err := s.repo.Create(o); err != nil {
-		return 0, err
+	err = s.tx.WithTx(
+		ctx,
+		txmanager.IsolationLevelReadCommitted,
+		txmanager.AccessModeReadWrite,
+		func(txCtx context.Context) error {
+			if err := s.ordRepo.Create(txCtx, o); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError, "failed to create order", "order_id", orderID)
+			}
+			evt := &models.HistoryEvent{
+				OrderID: o.ID,
+				Status:  o.Status,
+				Time:    now,
+			}
+			if err := s.hrRepo.AddHistory(txCtx, evt); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError, "failed to add history", "order_id", orderID)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return 0, errs.Wrap(err, errs.CodeDBTransactionError, "transaction failed", "order_id", orderID)
 	}
 
 	return total, nil
 }
 
-func (s *ServiceImpl) ReturnOrder(orderID string) error {
-	o, err := s.repo.Get(orderID)
+func (s *ServiceImpl) ReturnOrder(ctx context.Context, orderID string) error {
+	if orderID == "" {
+		return errs.New(errs.CodeValidationError, "empty order id")
+	}
+
+	err := s.tx.WithTx(
+		ctx,
+		txmanager.IsolationLevelRepeatableRead,
+		txmanager.AccessModeReadWrite,
+		func(txCtx context.Context) error {
+			o, err := s.ordRepo.Get(txCtx, orderID)
+			if err != nil {
+				return errs.Wrap(err, errs.CodeRecordNotFound, "order not found", "order_id", orderID)
+			}
+
+			if err := validateReturn(o); err != nil {
+				return err
+			}
+
+			now := time.Now()
+
+			rec := &models.ReturnRecord{
+				OrderID:    o.ID,
+				UserID:     o.UserID,
+				ReturnedAt: now,
+			}
+			if err := s.hrRepo.AddReturn(txCtx, rec); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError, "failed to add return", "order_id", orderID)
+			}
+
+			evt := &models.HistoryEvent{
+				OrderID: o.ID,
+				Status:  models.StatusReturned,
+				Time:    now,
+			}
+			if err := s.hrRepo.AddHistory(txCtx, evt); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError, "failed to add history", "order_id", orderID)
+			}
+
+			o.Status = models.StatusReturned
+			o.ReturnedAt = &now
+			if err := s.ordRepo.Update(txCtx, o); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError,
+					"failed to mark order returned", "order_id", orderID)
+			}
+			return nil
+		},
+	)
 	if err != nil {
-		return err
+		return errs.Wrap(err, errs.CodeDBTransactionError, "return order tx failed", "order_id", orderID)
 	}
 
-	if o.Status == models.StatusIssued {
-		return codes.ErrValidationFailed
-	}
-	if time.Now().Before(o.ExpiresAt) {
-		return codes.ErrStorageExpired
-	}
-
-	return s.repo.Delete(orderID)
+	return nil
 }
 
-func (s *ServiceImpl) IssueOrders(userID string, ids []string) (map[string]error, error) {
+func (s *ServiceImpl) IssueOrders(ctx context.Context, userID string, ids []string) (map[string]error, error) {
 	result := make(map[string]error, len(ids))
 	now := time.Now()
 
-	for _, id := range ids {
-		o, err := s.repo.Get(id)
-		if err != nil {
-			result[id] = codes.ErrOrderNotFound
-			continue
+	for _, orderID := range ids {
+		// каждая запись — своя транзакция
+		errTx := s.tx.WithTx(
+			ctx,
+			txmanager.IsolationLevelRepeatableRead,
+			txmanager.AccessModeReadWrite,
+			func(txCtx context.Context) error {
+				o, err := s.ordRepo.Get(txCtx, orderID)
+				if err != nil {
+					result[orderID] = errs.Wrap(err, errs.CodeRecordNotFound,
+						"order not found", "order_id", orderID)
+					return nil // не откатываем всю пачку. Норм? Или лучше "всё или ничего"?
+				}
+
+				if err := validateIssue(o, userID, now); err != nil {
+					result[orderID] = err
+					return nil
+				}
+
+				o.Status = models.StatusIssued
+				o.IssuedAt = &now
+				if err := s.ordRepo.Update(txCtx, o); err != nil {
+					result[orderID] = errs.Wrap(err, errs.CodeDatabaseError,
+						"failed to update order", "order_id", orderID)
+					return nil
+				}
+
+				evt := &models.HistoryEvent{
+					OrderID: o.ID,
+					Status:  models.StatusIssued,
+					Time:    now,
+				}
+				if err := s.hrRepo.AddHistory(txCtx, evt); err != nil {
+					result[orderID] = errs.Wrap(err, errs.CodeDatabaseError,
+						"failed to add history", "order_id", orderID)
+					return nil
+				}
+
+				result[orderID] = nil
+				return nil
+			},
+		)
+
+		// системная ошибка транзакции
+		if errTx != nil {
+			return nil, errs.Wrap(errTx, errs.CodeDBTransactionError,
+				"issue order tx failed", "order_id", orderID)
 		}
-		if o.UserID != userID {
-			result[id] = codes.ErrValidationFailed
-			continue
-		}
-		if o.Status != models.StatusAccepted {
-			result[id] = codes.ErrValidationFailed
-			continue
-		}
-		if now.After(o.ExpiresAt) {
-			result[id] = codes.ErrStorageExpired
-			continue
-		}
-		o.Status = models.StatusIssued
-		o.IssuedAt = &now
-		if err := s.repo.Update(o); err != nil {
-			result[id] = err
-			continue
-		}
-		result[id] = nil
 	}
 	return result, nil
 }
 
-func (s *ServiceImpl) ReturnOrdersByClient(userID string, ids []string) (map[string]error, error) {
+func (s *ServiceImpl) ReturnOrdersByClient(ctx context.Context, userID string, ids []string) (map[string]error, error) {
 	result := make(map[string]error, len(ids))
 	now := time.Now()
 
-	for _, id := range ids {
-		o, err := s.repo.Get(id)
-		if err != nil {
-			result[id] = codes.ErrOrderNotFound
-			continue
-		}
-		if o.UserID != userID {
-			result[id] = codes.ErrValidationFailed
-			continue
-		}
-		if o.Status != models.StatusIssued || o.IssuedAt == nil {
-			result[id] = codes.ErrValidationFailed
-			continue
-		}
-		if now.Sub(*o.IssuedAt) > 48*time.Hour {
-			result[id] = codes.ErrStorageExpired
-			continue
-		}
+	for _, orderID := range ids {
+		// отдельная транзакция на каждый заказ
+		errTx := s.tx.WithTx(
+			ctx,
+			txmanager.IsolationLevelRepeatableRead,
+			txmanager.AccessModeReadWrite,
+			func(txCtx context.Context) error {
+				o, err := s.ordRepo.Get(txCtx, orderID)
+				if err != nil {
+					result[orderID] = errs.Wrap(
+						err, errs.CodeRecordNotFound,
+						"order not found", "order_id", orderID,
+					)
+					return nil
+				}
 
-		updated := *o
-		updated.Status = models.StatusReturned
-		updated.ReturnedAt = &now
-		if err := s.repo.Update(&updated); err != nil {
-			result[id] = err
-			continue
+				if err := validateClientReturn(o, userID, now); err != nil {
+					result[orderID] = err
+					return nil
+				}
+
+				rec := &models.ReturnRecord{
+					OrderID:    o.ID,
+					UserID:     o.UserID,
+					ReturnedAt: now,
+				}
+				if err := s.hrRepo.AddReturn(txCtx, rec); err != nil {
+					result[orderID] = errs.Wrap(
+						err, errs.CodeDatabaseError,
+						"failed to add return record", "order_id", orderID,
+					)
+					return nil
+				}
+
+				o.Status = models.StatusReturned
+				o.ReturnedAt = &now
+				if err := s.ordRepo.Update(txCtx, o); err != nil {
+					result[orderID] = errs.Wrap(
+						err, errs.CodeDatabaseError,
+						"failed to mark order returned", "order_id", orderID,
+					)
+					return nil
+				}
+
+				evt := &models.HistoryEvent{
+					OrderID: o.ID,
+					Status:  models.StatusReturned,
+					Time:    now,
+				}
+				if err := s.hrRepo.AddHistory(txCtx, evt); err != nil {
+					result[orderID] = errs.Wrap(
+						err, errs.CodeDatabaseError,
+						"failed to add history event", "order_id", orderID,
+					)
+					return nil
+				}
+
+				result[orderID] = nil
+				return nil
+			},
+		)
+
+		if errTx != nil {
+			return nil, errs.Wrap(
+				errTx, errs.CodeDBTransactionError,
+				"return by client tx failed", "order_id", orderID,
+			)
 		}
-		result[id] = nil
 	}
+
 	return result, nil
 }
 
-func (s *ServiceImpl) ListOrders(
-	userID string,
-	onlyInPVZ bool,
-	lastN int,
+func (s *ServiceImpl) ListOrders(ctx context.Context, userID string, onlyInPVZ bool, lastN int, pg vo.Pagination) ([]*models.Order, int, error) {
+
+	if userID == "" {
+		return nil, 0, errs.New(errs.CodeValidationError, "empty user id")
+	}
+
+	var (
+		paged []*models.Order
+		total int
+	)
+
+	errTx := s.tx.WithTx(
+		ctx,
+		txmanager.IsolationLevelRepeatableRead,
+		txmanager.AccessModeReadOnly,
+		func(txCtx context.Context) error {
+
+			// активные заказы
+			active, err := s.ordRepo.ListByUser(
+				txCtx, userID, onlyInPVZ, 0, nil, // nil => без лимита
+			)
+			if err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError,
+					"listByUser failed", "user_id", userID)
+			}
+
+			sortOrders(active)
+			paged, total = paginate(active, lastN, pg)
+
+			return nil
+		},
+	)
+
+	if errTx != nil {
+		return nil, 0, errs.Wrap(errTx, errs.CodeDBTransactionError,
+			"list orders tx failed", "user_id", userID)
+	}
+
+	return paged, total, nil
+}
+
+func (s *ServiceImpl) ScrollOrders(ctx context.Context, userID string, cur vo.ScrollCursor) ([]*models.Order, vo.ScrollCursor, error) {
+	if userID == "" {
+		return nil, vo.ScrollCursor{}, errs.New(
+			errs.CodeValidationError, "empty user id",
+		)
+	}
+	roCtx := s.tx.WithReadOnly(ctx)
+	orders, next, err := s.ordRepo.NextBatchAfter(roCtx, userID, cur)
+	if err != nil {
+		return nil, vo.ScrollCursor{}, errs.Wrap(err, errs.CodeDatabaseError,
+			"next batch query failed", "user_id", userID)
+	}
+
+	return orders, next, nil
+}
+
+func (s *ServiceImpl) ListReturns(
+	ctx context.Context,
 	pg vo.Pagination,
-) ([]*models.Order, int, error) {
-	if userID == "" {
-		return nil, 0, codes.ErrValidationFailed
+) ([]*models.ReturnRecord, error) {
+
+	roCtx := s.tx.WithReadOnly(ctx)
+
+	records, err := s.hrRepo.ListReturns(roCtx, pg)
+	if err != nil {
+		return nil, errs.Wrap(err,
+			errs.CodeDatabaseError, "list returns failed")
 	}
-	return s.repo.ListByUser(userID, onlyInPVZ, lastN, pg)
+	return records, nil
 }
 
-func (s *ServiceImpl) ScrollOrders(userID string, cur vo.ScrollCursor) (
-	out []*models.Order, next vo.ScrollCursor, err error) {
+func (s *ServiceImpl) OrderHistory(
+	ctx context.Context,
+	pg vo.Pagination,
+) ([]*models.HistoryEvent, int, error) {
 
-	if userID == "" {
-		return nil, vo.ScrollCursor{}, codes.ErrValidationFailed
+	roCtx := s.tx.WithReadOnly(ctx)
+
+	events, err := s.hrRepo.History(roCtx, pg)
+	if err != nil {
+		return nil, 0, errs.Wrap(err,
+			errs.CodeDatabaseError, "list history failed")
 	}
-	return s.repo.NextBatchAfter(userID, cur)
+	return events, len(events), nil
 }
 
-func (s *ServiceImpl) ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, error) {
-	return s.repo.ListReturns(pg)
-}
+func (s *ServiceImpl) ImportOrders(ctx context.Context, orders []*models.Order) (int, error) {
 
-func (s *ServiceImpl) OrderHistory(pg vo.Pagination) ([]*models.HistoryEvent, int, error) {
-	return s.repo.History(pg)
-}
-
-func (s *ServiceImpl) ImportOrders(orders []*models.Order) (imported int, err error) {
-	if err := s.repo.ImportMany(orders); err != nil {
-		return 0, err
+	if len(orders) == 0 {
+		return 0, errs.New(errs.CodeValidationError, "empty orders slice")
 	}
+
+	errTx := s.tx.WithTx(
+		ctx,
+		txmanager.IsolationLevelReadCommitted,
+		txmanager.AccessModeReadWrite,
+		func(txCtx context.Context) error {
+			if err := s.ordRepo.ImportMany(txCtx, orders); err != nil {
+				return errs.Wrap(err,
+					errs.CodeDatabaseError, "import many failed")
+			}
+			now := time.Now()
+			for _, o := range orders {
+				evt := &models.HistoryEvent{
+					OrderID: o.ID,
+					Status:  models.StatusAccepted,
+					Time:    now,
+				}
+				if err := s.hrRepo.AddHistory(txCtx, evt); err != nil {
+					return errs.Wrap(err, errs.CodeDatabaseError,
+						"failed to add history for imported order", "order_id", o.ID)
+				}
+			}
+			return nil
+		},
+	)
+	if errTx != nil {
+		return 0, errs.Wrap(errTx,
+			errs.CodeDBTransactionError, "import orders tx failed")
+	}
+
 	return len(orders), nil
 }
 
-func (s *ServiceImpl) generateClientReport(sortBy string) ([]*models.ClientReport, error) {
-	activeOrders, err := s.repo.ListAllOrders()
-	if err != nil {
-		return nil, err
-	}
+func (s *ServiceImpl) generateClientReport(
+	ctx context.Context,
+	sortBy string,
+) ([]*models.ClientReport, error) {
 
-	returnsList, err := s.repo.ListReturns(vo.Pagination{})
-	if err != nil {
-		return nil, err
+	var allOrders []*models.Order
+
+	errTx := s.tx.WithTx(
+		ctx,
+		txmanager.IsolationLevelReadCommitted,
+		txmanager.AccessModeReadOnly,
+		func(txCtx context.Context) error {
+			var err error
+
+			allOrders, err = s.ordRepo.ListAllOrders(txCtx)
+			if err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError,
+					"list all orders failed")
+			}
+
+			return nil
+		},
+	)
+	if errTx != nil {
+		return nil, errs.Wrap(errTx, errs.CodeDBTransactionError,
+			"generate client report tx failed")
 	}
 
 	clientsMap := make(map[string]*models.ClientReport)
-
-	s.aggregateActiveOrders(clientsMap, activeOrders)
-	s.aggregateReturnRecords(clientsMap, returnsList)
+	aggregateOrders(clientsMap, allOrders)
 
 	reports := make([]*models.ClientReport, 0, len(clientsMap))
-	for _, v := range clientsMap {
-		reports = append(reports, v)
+	for _, r := range clientsMap {
+		reports = append(reports, r)
 	}
 
 	if err := sortReports(reports, sortBy); err != nil {
-		return nil, err
+		return nil, errs.Wrap(err, errs.CodeValidationError,
+			"invalid sort parameter")
 	}
 
 	return reports, nil
 }
 
-// aggregateActiveOrders добавляет к clientsMap данные по не возвращённым заказам.
-func (s *ServiceImpl) aggregateActiveOrders(clientsMap map[string]*models.ClientReport, activeOrders []*models.Order) {
-	for _, o := range activeOrders {
+func aggregateOrders(
+	clientsMap map[string]*models.ClientReport,
+	orders []*models.Order,
+) {
+	for _, o := range orders {
 		cr, exists := clientsMap[o.UserID]
 		if !exists {
 			cr = &models.ClientReport{UserID: o.UserID}
 			clientsMap[o.UserID] = cr
 		}
 		cr.TotalOrders++
-		cr.TotalPurchaseSum += models.PriceKopecks(o.Price)
-	}
-}
-
-// aggregateReturnRecords добавляет к clientsMap данные по всем возвратам.
-func (s *ServiceImpl) aggregateReturnRecords(clientsMap map[string]*models.ClientReport, returnsList []*models.ReturnRecord) {
-	for _, rec := range returnsList {
-		cr, exists := clientsMap[rec.UserID]
-		if !exists {
-			cr = &models.ClientReport{UserID: rec.UserID}
-			clientsMap[rec.UserID] = cr
+		if o.Status == models.StatusReturned {
+			cr.ReturnedOrders++
+		} else {
+			cr.TotalPurchaseSum += o.Price
 		}
-		cr.TotalOrders++
-		cr.ReturnedOrders++
-		// цену не добавляю, т.к. покупка не состоялась
 	}
 }
 
-func (s *ServiceImpl) GenerateClientReportByte(sortBy string) ([]byte, error) {
-	reports, err := s.generateClientReport(sortBy)
+func (s *ServiceImpl) GenerateClientReportByte(ctx context.Context, sortBy string) ([]byte, error) {
+	reports, err := s.generateClientReport(ctx, sortBy)
 	if err != nil {
 		return nil, err
 	}

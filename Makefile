@@ -230,3 +230,50 @@ gen:
 		$(PROTO_FILES) $(SERVICE_PROTO_FILES)
 
 	go mod tidy
+
+
+include .env
+
+DB_USER      = $(PG_SUPER_USER)
+DB_PASSWORD  = $(PG_SUPER_PASSWORD)
+DB_HOST      = $(PG_HOST)
+DB_PORT      = $(PG_MASTER_PORT)
+DB_NAME      = $(PG_DATABASE)
+
+DATABASE_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+
+GOOSE_BIN := $(shell go env GOPATH)/bin/goose
+
+.PHONY: install-goose
+install-goose:
+	go install github.com/pressly/goose/v3/cmd/goose@latest
+
+.PHONY: up down reset status create
+
+up:
+	$(GOOSE_BIN) -dir migrations postgres "$(DATABASE_DSN)" up
+
+down:
+	$(GOOSE_BIN) -dir migrations postgres "$(DATABASE_DSN)" down
+
+reset:
+	$(GOOSE_BIN) -dir migrations postgres "$(DATABASE_DSN)" reset
+
+status:
+	$(GOOSE_BIN) -dir migrations postgres "$(DATABASE_DSN)" status
+
+create:
+	$(GOOSE_BIN) -dir migrations create $(name) sql
+
+.PHONY: docker-up start docker-down
+
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down -v
+
+start: docker-up up
+	go run ./cmd/pvz/main.go --config ./configs/config.yaml --env .env
+
+

@@ -1,79 +1,46 @@
-# Список команд для теста:
+# Quickstart & Test Guide
 
-Файл для импорта
-data/import_demo.json
+## Запуск приложения
 
-```json
-[
-  { "order_id": "ORD200", "user_id": "U999", "expires_at": "2025-07-15" },
-  { "order_id": "ORD201", "user_id": "U999", "expires_at": "2025-07-15" }
-]
+```bash
+make start
 ```
 
-| №      | Команда                                                                                                                                                  | Ожидаемый вывод / комментарий                                                                                                             |
-|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| **0**  | `help`                                                                                                                                                   | Появится сводка всех команд.                                                                                                              |
-| **1**  | `accept-order --order-id ORD001 --user-id U123 --expires 2025-06-30 --weight 5 --price 10.00 --package bag`                                              | `ORDER_ACCEPTED: ORD001`<br>`PACKAGE: bag`<br>`TOTAL_PRICE: 15.00₽` (цена 10₽ + 5₽ наценка за bag, вес < 10 кг)                           |
-| **2**  | *(дубликат)*<br>`accept-order --order-id ORD001 --user-id U123 --expires 2025-06-30 --weight 5 --price 10.00 --package bag`                              | `ERROR: ORDER_ALREADY_EXISTS: order already exists`                                                                                       |
-| **3**  | *(прошедшая дата)*<br>`accept-order --order-id ORD002 --user-id U123 --expires 2020-01-01 --weight 2 --price 5.00`                                       | `ERROR: VALIDATION_FAILED: validation failed`                                                                                             |
-| **4**  | `accept-order --order-id ORD003 --user-id U123 --expires 2025-06-30 --weight 12 --price 20.00 --package box+film`                                        | `ORDER_ACCEPTED: ORD003`<br>`PACKAGE: box+film`<br>`TOTAL_PRICE: 41.00₽` (цена 20₽ + 20₽ за box + 1₽ за film, вес < 30 кг)                |
-| **5**  | `accept-order --order-id ORD005 --user-id U124 --expires 2025-06-30 --weight 8 --price 12.00`                                                            | `ORDER_ACCEPTED: ORD005`<br>`PACKAGE:` (пусто или none — без упаковки)<br>`TOTAL_PRICE: 12.00₽` (цена без наценки)                        |
-| **6**  | `accept-order --order-id ORD006 --user-id U123 --expires 2025-06-30 --weight 15 --price 10.00 --package bag`                                             | `ERROR: WEIGHT_TOO_HEAVY` (для пакета вес 15 кг ≥ 10 кг)                                                                                  |
-| **7**  | `accept-order --order-id ORD007 --user-id U123 --expires 2025-06-30 --weight 35 --price 10.00 --package box`                                             | `ERROR: WEIGHT_TOO_HEAVY` (для коробки вес 35 кг ≥ 30 кг)                                                                                 |
-| **8**  | `accept-order --order-id ORD008 --user-id U123 --expires 2025-06-30 --weight 10 --price 10.00 --package unknown`                                         | `ERROR: INVALID_PACKAGE` (неизвестный тип упаковки)                                                                                       |
-| **9**  | `accept-order --order-id ORD009 --user-id U123 --expires 2025-06-30 --weight 0 --price 10.00 --package bag`                                              | `ERROR: VALIDATION_FAILED` (вес должен быть > 0)                                                                                          |
-| **10** | `accept-order --order-id ORD010 --user-id U123 --expires 2025-06-30 --weight 5 --price 0 --package bag`                                                  | `ERROR: VALIDATION_FAILED` (цена должна быть > 0)                                                                                         |
-| **11** | `list-orders --user-id U123 --in-pvz`                                                                                                                    | две строки `ORDER: …` с полями: ID, UserID, Status, ExpiresAt, Package, Weight, Price<br> + `TOTAL: 2`                                    |
-| **12** | `process-orders --user-id U123 --action issue --order-ids ORD001,ORD003`                                                                                 | `PROCESSED: ORD001`<br>`PROCESSED: ORD003`                                                                                                |
-| **13** | `process-orders --user-id U123 --action issue --order-ids ORD001`                                                                                        | `ERROR ORD001: VALIDATION_FAILED` (уже выданы)                                                                                            |
-| **14** | *(клиентский возврат < 48 ч)*<br>`process-orders --user-id U123 --action return --order-ids ORD001`                                                      | `PROCESSED: ORD001`                                                                                                                       |
-| **15** | `list-returns`                                                                                                                                           | `RETURN: ORD001 U123 <date>` + `PAGE: 1 LIMIT: 20`                                                                                        |
-| **16** | Завершите приложение, измените дату вручную в файле orders.json `expires_at` на вчера для заказа с id=ORD004, затем:<br>`return-order --order-id ORD004` | `ORDER_RETURNED: ORD004`                                                                                                                  |
-| **17** | `list-returns --page 1 --limit 1`                                                                                                                        | постранично один возврат                                                                                                                  |
-| **18** | `order-history`                                                                                                                                          | лента `HISTORY: …` (ACCEPTED → ISSUED → RETURNED …)                                                                                       |
-| **19** | `import-orders --file data/import_demo.json`                                                                                                             | `IMPORTED: 2`                                                                                                                             |
-| **20** | `list-orders --user-id U999 --page 1 --limit 5`                                                                                                          | увидите ORD200, ORD201                                                                                                                    |
-| **21** | `scroll-orders --user-id U999 --limit 1`                                                                                                                 | CLI покажет первую запись + `NEXT: ORD200` <br>введите `next` → вторая запись + `NEXT: ORD201` <br>ещё `next` → приложение завершит цикл. |
+После запуска откройте Swagger UI:
 
-## Дополнительная фича - Генерация отчёта
+```bash
+http://localhost:8080/swagger/http/index.html
+```
 
-1. Удалить (или очистить) из папки data/ файлы orders.json, returns.json и history.json, если в них остались данные.
+## Порядок команд 
 
-2. Запустить приложение и ввести подряд команды:
+1. Приём одного заказа /v1/orders/accept
+2. Импорт нескольких заказов /v1/orders/import
+3. Просмотр списка заказов /v1/orders, ставим user_id=200
+4. Откройте pgAdmin (http://localhost:5050), войдите:
+   * Email: 123ozon123
+   * Password: mega_secret_pass_ozon_dev
+    Выберите сервер Postgres Master → база pvz → Query Tool.
+    Выполните:
+    ```sql
+    UPDATE orders
+    SET expires_at = now() - interval '1 day'
+    WHERE id = 100;
+    ```
 
-`accept-order --order-id ORD1 --user-id userA --expires 2025-12-31 --weight 2 --price 10.00 --package bag`
+5. Возврат заказа /v1/orders/100/return
+6. Проверка возвратов /v1/orders/returns
+7. Проверка истории /v1/orders/history
+8. Ручка /v1/orders/process с телом:
+    ```json
+    {
+    "user_id": 201,
+    "action": "ACTION_TYPE_ISSUE",
+    "order_ids": [101]
+    }
+    ```
 
-`accept-order --order-id ORD2 --user-id userA --expires 2025-12-31 --weight 1 --price 5.00 --package film`
-
-`accept-order --order-id ORD3 --user-id userB --expires 2025-12-31 --weight 3 --price 20.00 --package box`
-
-`accept-order --order-id ORD4 --user-id userC --expires 2025-12-31 --weight 0.5 --price 10.00`
-
-`process-orders --user-id userA --action issue --order-ids ORD1`
-
-Остановить приложение. Открыть файл data/orders.json и для записи "ORD2" вручную изменить поле `expires_at`:
-
-`"expires_at": "2025-05-31T00:00:00Z"`
-
-Снова запустить приложение и выполнить команды:
-
-`return-order --order-id ORD2`
-
-`client-report --sort orders --output report/clients_report.xlsx`
-
-Ожидаемый результат:
-
-| UserID | Total Orders | Returned Orders | Total Purchase Sum (₽) |
-|:------:|:------------:|:---------------:|:----------------------:|
-| userA  |      2       |        1        |         10.00          |
-| userB  |      1       |        0        |         20.00          |
-| userC  |      1       |        0        |         10.00          |
-
-
-Если поставим --sort sum, то результат должен быть:
-
-| UserID | Total Orders | Returned Orders | Total Purchase Sum (₽) |
-|:------:|:------------:|:---------------:|:----------------------:|
-| userB  |      1       |        0        |         20.00          |
-| userA  |      2       |        1        |         10.00          |
-| userC  |      1       |        0        |         10.00          |
+9. Генерация отчёта клиентов : в браузере переходим по ссылке:
+    ```bash
+    http://localhost:8080/v1/reports/clients?sortBy=orders-
+    ```

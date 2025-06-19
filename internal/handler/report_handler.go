@@ -21,7 +21,7 @@ func NewReportsHandler(svc usecase.Service) *reportsHandlerImp {
 
 func (h *reportsHandlerImp) DownloadClientReport(c *gin.Context) {
 	sortBy := c.Query("sortBy")
-	dataBytes, err := h.svc.GenerateClientReportByte(sortBy)
+	dataBytes, err := h.svc.GenerateClientReportByte(c, sortBy)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "failed to generate report: %v", err)
 		return
