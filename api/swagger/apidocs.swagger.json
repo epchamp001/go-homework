@@ -1,0 +1,705 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Order Pick-Up Point",
+    "description": "API для управления процессами Пункта Выдачи Заказов",
+    "version": "1.0",
+    "contact": {
+      "name": "Egor Ponyaev",
+      "url": "https://github.com/epchamp001",
+      "email": "epchamp001@gmail.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "OrdersService"
+    }
+  ],
+  "host": "localhost:8080",
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/orders": {
+      "get": {
+        "summary": "Получить список заказов клиента",
+        "operationId": "OrdersService_ListOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ordersOrdersList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "Требует user_id \u003e 0",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "inPvz",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "lastN",
+            "description": "Если задан last_n, то \u003e 0",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pagination.countOnPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "OrdersService"
+        ]
+      }
+    },
+    "/v1/orders/accept": {
+      "post": {
+        "summary": "Принять заказ от курьера",
+        "operationId": "OrdersService_AcceptOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ordersOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ordersAcceptOrderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OrdersService"
+        ]
+      }
+    },
+    "/v1/orders/history": {
+      "get": {
+        "summary": "Получить историю изменения заказов",
+        "operationId": "OrdersService_GetHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ordersOrderHistoryList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pagination.countOnPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "OrdersService"
+        ]
+      }
+    },
+    "/v1/orders/import": {
+      "post": {
+        "summary": "Импортировать заказы",
+        "operationId": "OrdersService_ImportOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ordersImportResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ordersImportOrdersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OrdersService"
+        ]
+      }
+    },
+    "/v1/orders/process": {
+      "post": {
+        "summary": "Выдать заказы или принять возврат клиента",
+        "operationId": "OrdersService_ProcessOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ordersProcessResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ordersProcessOrdersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OrdersService"
+        ]
+      }
+    },
+    "/v1/orders/returns": {
+      "get": {
+        "summary": "Получить список возвратов клиентов (постранично, от новых к старым)",
+        "operationId": "OrdersService_ListReturns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ordersReturnsList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pagination.countOnPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "OrdersService"
+        ]
+      }
+    },
+    "/v1/orders/{orderId}/return": {
+      "post": {
+        "summary": "Вернуть заказ курьеру",
+        "operationId": "OrdersService_ReturnOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ordersOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderId",
+            "description": "ID заказа, обязателен, \u003e 0",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
+        "tags": [
+          "OrdersService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ordersAcceptOrderRequest": {
+      "type": "object",
+      "example": {
+        "order_id": "12345",
+        "user_id": "67890",
+        "expires_at": "2025-12-31T12:00:00Z",
+        "package": "PACKAGE_TYPE_BOX",
+        "weight": 1.5,
+        "price": 100.0
+      },
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "uint64",
+          "title": "ID заказа, обязателен, \u003e 0"
+        },
+        "userId": {
+          "type": "string",
+          "format": "uint64",
+          "title": "ID пользователя, обязателен, \u003e 0"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Срок хранения, обязателен (будущая дата проверяется бизнес-логикой)"
+        },
+        "package": {
+          "$ref": "#/definitions/ordersPackageType",
+          "title": "Тип упаковки — валидный enum (может быть не задан)"
+        },
+        "weight": {
+          "type": "number",
+          "format": "float",
+          "title": "Вес \u003e 0 (проверка максимального веса зависит от упаковки и выполняется бизнес-логикой)"
+        },
+        "price": {
+          "type": "number",
+          "format": "float",
+          "title": "Цена \u003e 0 (в рублях, переводится в копейки бизнес-логикой)"
+        }
+      }
+    },
+    "ordersActionType": {
+      "type": "string",
+      "enum": [
+        "ACTION_TYPE_UNSPECIFIED",
+        "ACTION_TYPE_ISSUE",
+        "ACTION_TYPE_RETURN"
+      ],
+      "default": "ACTION_TYPE_UNSPECIFIED"
+    },
+    "ordersImportOrdersRequest": {
+      "type": "object",
+      "example": {
+        "orders": [
+          {
+            "order_id": "100",
+            "user_id": "200",
+            "expires_at": "2025-12-15T10:00:00Z",
+            "package": "PACKAGE_TYPE_BAG",
+            "weight": 1.0,
+            "price": 50.0
+          },
+          {
+            "order_id": "101",
+            "user_id": "201",
+            "expires_at": "2025-11-30T15:00:00Z",
+            "package": "PACKAGE_TYPE_BOX",
+            "weight": 2.0,
+            "price": 150.0
+          }
+        ]
+      },
+      "properties": {
+        "orders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/ordersAcceptOrderRequest"
+          },
+          "title": "Список заказов, минимум один элемент"
+        }
+      }
+    },
+    "ordersImportResult": {
+      "type": "object",
+      "example": {
+        "imported": 2,
+        "errors": []
+      },
+      "properties": {
+        "imported": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uint64"
+          }
+        }
+      }
+    },
+    "ordersOrder": {
+      "type": "object",
+      "example": {
+        "order_id": "1",
+        "user_id": "123",
+        "status": "ORDER_STATUS_ACCEPTED",
+        "expires_at": "2025-12-05T10:00:00Z",
+        "weight": 1.5,
+        "total_price": 120.0,
+        "package": "PACKAGE_TYPE_BAG"
+      },
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "userId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "status": {
+          "$ref": "#/definitions/ordersOrderStatus"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "weight": {
+          "type": "number",
+          "format": "float"
+        },
+        "totalPrice": {
+          "type": "number",
+          "format": "float"
+        },
+        "package": {
+          "$ref": "#/definitions/ordersPackageType"
+        }
+      }
+    },
+    "ordersOrderHistory": {
+      "type": "object",
+      "example": {
+        "order_id": "1",
+        "status": "ORDER_STATUS_ACCEPTED",
+        "created_at": "2025-12-03T14:20:00Z"
+      },
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "status": {
+          "$ref": "#/definitions/ordersOrderStatus"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "ordersOrderHistoryList": {
+      "type": "object",
+      "example": {
+        "history": [
+          {
+            "order_id": "1",
+            "status": "ORDER_STATUS_ACCEPTED",
+            "created_at": "2025-12-03T14:20:00Z"
+          }
+        ]
+      },
+      "properties": {
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/ordersOrderHistory"
+          }
+        }
+      }
+    },
+    "ordersOrderResponse": {
+      "type": "object",
+      "example": {
+        "status": "ORDER_STATUS_ACCEPTED",
+        "order_id": "12345"
+      },
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/ordersOrderStatus"
+        },
+        "orderId": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "ordersOrderStatus": {
+      "type": "string",
+      "enum": [
+        "ORDER_STATUS_UNSPECIFIED",
+        "ORDER_STATUS_EXPECTS",
+        "ORDER_STATUS_ACCEPTED",
+        "ORDER_STATUS_RETURNED",
+        "ORDER_STATUS_DELETED"
+      ],
+      "default": "ORDER_STATUS_UNSPECIFIED"
+    },
+    "ordersOrdersList": {
+      "type": "object",
+      "example": {
+        "orders": [
+          {
+            "order_id": "1",
+            "user_id": "123",
+            "status": "ORDER_STATUS_EXPECTS",
+            "expires_at": "2025-12-05T10:00:00Z",
+            "weight": 1.5,
+            "total_price": 120.0,
+            "package": "PACKAGE_TYPE_BOX"
+          }
+        ],
+        "total": 100
+      },
+      "properties": {
+        "orders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/ordersOrder"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "ordersPackageType": {
+      "type": "string",
+      "enum": [
+        "PACKAGE_TYPE_UNSPECIFIED",
+        "PACKAGE_TYPE_BAG",
+        "PACKAGE_TYPE_BOX",
+        "PACKAGE_TYPE_TAPE",
+        "PACKAGE_TYPE_BAG_TAPE",
+        "PACKAGE_TYPE_BOX_TAPE"
+      ],
+      "default": "PACKAGE_TYPE_UNSPECIFIED"
+    },
+    "ordersPagination": {
+      "type": "object",
+      "example": {
+        "page": 1,
+        "count_on_page": 20
+      },
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "countOnPage": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "ordersProcessOrdersRequest": {
+      "type": "object",
+      "example": {
+        "user_id": "123",
+        "action": "ACTION_TYPE_ISSUE",
+        "order_ids": [
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "properties": {
+        "userId": {
+          "type": "string",
+          "format": "uint64",
+          "title": "ID пользователя, обязателен, \u003e 0"
+        },
+        "action": {
+          "$ref": "#/definitions/ordersActionType",
+          "title": "Тип действия (ISSUE или RETURN)"
+        },
+        "orderIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uint64"
+          },
+          "title": "Список ID заказов, каждый \u003e 0, минимум один"
+        }
+      }
+    },
+    "ordersProcessResult": {
+      "type": "object",
+      "example": {
+        "processed": [
+          "1",
+          "2"
+        ],
+        "errors": [
+          "3"
+        ]
+      },
+      "properties": {
+        "processed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uint64"
+          }
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uint64"
+          }
+        }
+      }
+    },
+    "ordersReturnRecord": {
+      "type": "object",
+      "example": {
+        "order_id": "1",
+        "user_id": "123",
+        "returned_at": "2025-12-01T13:45:00Z"
+      },
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "userId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "returnedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "ordersReturnsList": {
+      "type": "object",
+      "example": {
+        "returns": [
+          {
+            "order_id": "1",
+            "user_id": "123",
+            "returned_at": "2025-12-01T13:45:00Z"
+          }
+        ]
+      },
+      "properties": {
+        "returns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/ordersReturnRecord"
+          }
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

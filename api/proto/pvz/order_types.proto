@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package orders;
+
+option go_package = "api/pkg/pvz;pvzpb";
+
+
+enum ActionType {
+  ACTION_TYPE_UNSPECIFIED = 0;
+  ACTION_TYPE_ISSUE = 1;
+  ACTION_TYPE_RETURN = 2;
+}
+
+enum PackageType {
+  PACKAGE_TYPE_UNSPECIFIED = 0;
+  PACKAGE_TYPE_BAG = 1;
+  PACKAGE_TYPE_BOX = 2;
+  PACKAGE_TYPE_TAPE = 3;
+  PACKAGE_TYPE_BAG_TAPE = 4;
+  PACKAGE_TYPE_BOX_TAPE = 5;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_EXPECTS = 1;
+  ORDER_STATUS_ACCEPTED = 2;
+  ORDER_STATUS_RETURNED = 3;
+  ORDER_STATUS_DELETED = 4;
+}

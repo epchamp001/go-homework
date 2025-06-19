@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"pvz-cli/internal/app"
 	"pvz-cli/internal/config"
-	"pvz-cli/pkg/closer"
 	"syscall"
 	"time"
 
@@ -45,46 +44,35 @@ func main() {
 		os.Exit(1)
 	}
 
-	c := closer.NewCloser()
-
 	log, err := app.SetupLogger(cfg.Logging)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Logger init error: %v\n", err)
 		os.Exit(1)
 	}
+	defer log.Sync()
 
-	c.Add(func(_ context.Context) error {
-		log.Sync()
-		return nil
-	})
+	server := app.NewServer(cfg, log)
 
-	a := app.New(log)
-
-	runErr := make(chan error, 1)
-	go func() {
-		runErr <- a.Run(ctx)
-	}()
-
-	select {
-	case <-ctx.Done():
-	case err := <-runErr:
-		if err != nil {
-			log.Fatalw("Failed to start server",
-				"error", err,
-			)
-		}
+	if err := server.Run(ctx); err != nil {
+		log.Fatalw("Failed to start server",
+			"error", err,
+		)
 	}
+
+	<-ctx.Done()
 
 	shutdownCtx, cancel := context.WithTimeout(
 		context.Background(),
-		time.Duration(cfg.App.ShutdownTimeout)*time.Second,
+		time.Duration(cfg.GRPCServer.ShutdownTimeout)*time.Second,
 	)
 	defer cancel()
 
-	if err := c.Close(shutdownCtx); err != nil {
-		fmt.Fprintf(os.Stderr, "Shutdown error: %v\n", err)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Errorw("Shutdown failed",
+			"error", err,
+		)
 		os.Exit(1)
 	}
 
-	fmt.Println("Application stopped gracefully")
+	log.Info("Application stopped gracefully")
 }

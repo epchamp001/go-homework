@@ -1,0 +1,331 @@
+syntax = "proto3";
+
+package orders;
+
+import "pvz/order_types.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+import "validate/validate.proto";
+
+option go_package = "api/pkg/pvz;pvzpb";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title:       "Order Pick-Up Point"
+    description: "API для управления процессами Пункта Выдачи Заказов"
+    version:     "1.0"
+    contact: {
+      name:  "Egor Ponyaev"
+      url:   "https://github.com/epchamp001"
+      email: "epchamp001@gmail.com"
+    }
+  }
+  host: "localhost:8080";
+  schemes: HTTP;
+  consumes: "application/json"
+  produces: "application/json"
+};
+
+service OrdersService {
+  // Принять заказ от курьера
+  rpc AcceptOrder(AcceptOrderRequest) returns (OrderResponse) {
+    option (google.api.http) = {
+      post: "/v1/orders/accept"
+      body: "*"
+    };
+  }
+
+  // Вернуть заказ курьеру
+  rpc ReturnOrder(OrderIdRequest) returns (OrderResponse) {
+    option (google.api.http) = {
+      post: "/v1/orders/{order_id}/return"
+    };
+  }
+
+  // Выдать заказы или принять возврат клиента
+  rpc ProcessOrders(ProcessOrdersRequest) returns (ProcessResult) {
+    option (google.api.http) = {
+      post: "/v1/orders/process"
+      body: "*"
+    };
+  }
+
+  // Получить список заказов клиента
+  rpc ListOrders(ListOrdersRequest) returns (OrdersList) {
+    option (google.api.http) = {
+      get: "/v1/orders"
+    };
+  }
+
+  // Получить список возвратов клиентов (постранично, от новых к старым)
+  rpc ListReturns(ListReturnsRequest) returns (ReturnsList) {
+    option (google.api.http) = {
+      get: "/v1/orders/returns"
+    };
+  }
+
+  // Получить историю изменения заказов
+  rpc GetHistory(GetHistoryRequest) returns (OrderHistoryList) {
+    option (google.api.http) = {
+      get: "/v1/orders/history"
+    };
+  }
+
+  // Импортировать заказы
+  rpc ImportOrders(ImportOrdersRequest) returns (ImportResult) {
+    option (google.api.http) = {
+      post: "/v1/orders/import"
+      body: "*"
+    };
+  }
+}
+
+
+message AcceptOrderRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"order_id\":\"12345\",\"user_id\":\"67890\",\"expires_at\":\"2025-12-31T12:00:00Z\",\"package\":\"PACKAGE_TYPE_BOX\",\"weight\":1.5,\"price\":100.0}"
+    }
+  };
+
+  // ID заказа, обязателен, > 0
+  uint64 order_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
+  // ID пользователя, обязателен, > 0
+  uint64 user_id = 2 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
+  // Срок хранения, обязателен (будущая дата проверяется бизнес-логикой)
+  google.protobuf.Timestamp expires_at = 3;
+
+  // Тип упаковки — валидный enum (может быть не задан)
+  optional PackageType package = 4 [
+    (validate.rules).enum = {defined_only: true}
+  ];
+
+  // Вес > 0 (проверка максимального веса зависит от упаковки и выполняется бизнес-логикой)
+  float weight = 5 [
+    (validate.rules).float = {gt: 0}
+  ];
+
+  // Цена > 0 (в рублях, переводится в копейки бизнес-логикой)
+  float price = 6 [
+    (validate.rules).float = {gt: 0}
+  ];
+}
+
+message OrderIdRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"order_id\":\"12345\"}"
+    }
+  };
+
+  // ID заказа, обязателен, > 0
+  uint64 order_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+}
+
+message ProcessOrdersRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"user_id\":\"123\",\"action\":\"ACTION_TYPE_ISSUE\",\"order_ids\":[\"1\",\"2\",\"3\"]}"
+    }
+  };
+
+  // ID пользователя, обязателен, > 0
+  uint64 user_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
+  // Тип действия (ISSUE или RETURN)
+  ActionType action = 2 [
+    (validate.rules).enum = {defined_only: true}
+  ];
+
+  // Список ID заказов, каждый > 0, минимум один
+  repeated uint64 order_ids = 3 [
+    (validate.rules).repeated = {
+      min_items: 1
+      items: {uint64: {gt: 0}}
+    }
+  ];
+}
+
+message ListOrdersRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"user_id\":\"123\",\"in_pvz\":true,\"last_n\":10,\"pagination\":{\"page\":1,\"count_on_page\":20}}"
+    }
+  };
+
+  // Требует user_id > 0
+  uint64 user_id = 1 [
+    (validate.rules).uint64 = {gt: 0}
+  ];
+
+  bool in_pvz = 2;
+
+  // Если задан last_n, то > 0
+  optional uint32 last_n = 3 [
+    (validate.rules).uint32 = {gt: 0}
+  ];
+
+  optional Pagination pagination = 4;
+}
+
+message ImportOrdersRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"orders\":[{\"order_id\":\"100\",\"user_id\":\"200\",\"expires_at\":\"2025-12-15T10:00:00Z\",\"package\":\"PACKAGE_TYPE_BAG\",\"weight\":1.0,\"price\":50.0},{\"order_id\":\"101\",\"user_id\":\"201\",\"expires_at\":\"2025-11-30T15:00:00Z\",\"package\":\"PACKAGE_TYPE_BOX\",\"weight\":2.0,\"price\":150.0}]}"
+    }
+  };
+
+  // Список заказов, минимум один элемент
+  repeated AcceptOrderRequest orders = 1 [
+    (validate.rules).repeated = {
+      min_items: 1
+      items: {message: {}}
+    }
+  ];
+}
+
+message GetHistoryRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"pagination\":{\"page\":1,\"count_on_page\":50}}"
+    }
+  };
+
+  optional Pagination pagination = 1;
+}
+
+message OrderResponse {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"status\":\"ORDER_STATUS_ACCEPTED\",\"order_id\":\"12345\"}"
+    }
+  };
+
+  OrderStatus status = 1;
+  uint64 order_id = 2;
+}
+
+message ProcessResult {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"processed\":[\"1\",\"2\"],\"errors\":[\"3\"]}"
+    }
+  };
+
+  repeated uint64 processed = 1;
+  repeated uint64 errors = 2;
+}
+
+message OrdersList {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"orders\":[{\"order_id\":\"1\",\"user_id\":\"123\",\"status\":\"ORDER_STATUS_EXPECTS\",\"expires_at\":\"2025-12-05T10:00:00Z\",\"weight\":1.5,\"total_price\":120.0,\"package\":\"PACKAGE_TYPE_BOX\"}],\"total\":100}"
+    }
+  };
+
+  repeated Order orders = 1;
+  int32 total = 2;
+}
+
+message OrderHistoryList {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"history\":[{\"order_id\":\"1\",\"status\":\"ORDER_STATUS_ACCEPTED\",\"created_at\":\"2025-12-03T14:20:00Z\"}]}"
+    }
+  };
+
+  repeated OrderHistory history = 1;
+}
+
+message ImportResult {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"imported\":2,\"errors\":[]}"
+    }
+  };
+
+  int32 imported = 1;
+  repeated uint64 errors = 2;
+}
+
+message Order {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"order_id\":\"1\",\"user_id\":\"123\",\"status\":\"ORDER_STATUS_ACCEPTED\",\"expires_at\":\"2025-12-05T10:00:00Z\",\"weight\":1.5,\"total_price\":120.0,\"package\":\"PACKAGE_TYPE_BAG\"}"
+    }
+  };
+
+  uint64 order_id = 1;
+  uint64 user_id = 2;
+  OrderStatus status = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  float weight = 5;
+  float total_price = 6;
+  optional PackageType package = 7;
+}
+
+message OrderHistory {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"order_id\":\"1\",\"status\":\"ORDER_STATUS_ACCEPTED\",\"created_at\":\"2025-12-03T14:20:00Z\"}"
+    }
+  };
+
+  uint64 order_id = 1;
+  OrderStatus status = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message Pagination {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"page\":1,\"count_on_page\":20}"
+    }
+  };
+
+  uint32 page = 1;
+  uint32 count_on_page = 2;
+}
+
+message ListReturnsRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"pagination\":{\"page\":1,\"count_on_page\":20}}"
+    }
+  };
+
+  optional Pagination pagination = 1;
+}
+
+message ReturnsList {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"returns\":[{\"order_id\":\"1\",\"user_id\":\"123\",\"returned_at\":\"2025-12-01T13:45:00Z\"}]}"
+    }
+  };
+
+  repeated ReturnRecord returns = 1;
+}
+
+message ReturnRecord {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      example: "{\"order_id\":\"1\",\"user_id\":\"123\",\"returned_at\":\"2025-12-01T13:45:00Z\"}"
+    }
+  };
+
+  uint64 order_id = 1;
+  uint64 user_id = 2;
+  google.protobuf.Timestamp returned_at = 3;
+}

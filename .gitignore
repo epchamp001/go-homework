@@ -1,3 +1,9 @@
 .idea/
 
 data/*.json
+
+.DS_Store
+
+bin/
+
+vendor-proto/

@@ -185,8 +185,12 @@ func (r *FileRepo) ListReturns(pg vo.Pagination) ([]*models.ReturnRecord, error)
 	return out, nil
 }
 
-func (r *FileRepo) History() ([]*models.HistoryEvent, error) {
-	return r.history, nil
+func (r *FileRepo) History(pg vo.Pagination) ([]*models.HistoryEvent, int, error) {
+	all := make([]*models.HistoryEvent, len(r.history))
+	copy(all, r.history)
+
+	paged, total := paginate[*models.HistoryEvent](all, 0, pg)
+	return paged, total, nil
 }
 
 func (r *FileRepo) ImportMany(list []*models.Order) error {
