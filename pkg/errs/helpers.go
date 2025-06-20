@@ -3,9 +3,10 @@ package errs
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
-	"net/http"
 )
 
 func IsCode(err error, code string) bool {

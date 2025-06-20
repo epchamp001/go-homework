@@ -1,0 +1,9 @@
+*.pb.go linguist-generated=true
+
+*.pb.go export-ignore
+
+*.pb.go -diff
+
+vendor-proto/** linguist-generated=true
+vendor-proto/** export-ignore
+vendor-proto/** -diff

@@ -2,10 +2,11 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // selectClause возвращает основу SELECT-части без WHERE

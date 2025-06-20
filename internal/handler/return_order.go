@@ -2,12 +2,14 @@ package handler
 
 import (
 	"context"
-	"google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
+	errCodes "pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/handler/mappers"
 	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
 	"strconv"
+
+	"google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
 func (s *OrderServiceServer) ReturnOrder(
@@ -33,5 +35,5 @@ func (s *OrderServiceServer) ReturnOrder(
 		return nil, grpcstatus.Error(codes.Internal, err.Error())
 	}
 
-	return mappers.DomainToProtoOrderResponse("ORDER_STATUS_DELETED", orderIDStr)
+	return mappers.DomainToProtoOrderResponse(errCodes.CodeOrderReturned, orderIDStr)
 }

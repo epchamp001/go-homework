@@ -3,11 +3,12 @@ package txmanager
 import (
 	"context"
 	"errors"
+	"pvz-cli/pkg/logger"
+	"sync/atomic"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"pvz-cli/pkg/logger"
-	"sync/atomic"
 )
 
 type Executor interface {

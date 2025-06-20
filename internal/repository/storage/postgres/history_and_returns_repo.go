@@ -29,9 +29,6 @@ const (
 			order_id, status, event_time
 		FROM order_history`
 
-	countHistorySQL = `
-		SELECT COUNT(*) FROM order_history`
-
 	insertHistorySQL = `
         INSERT INTO order_history (
             order_id, status, event_time

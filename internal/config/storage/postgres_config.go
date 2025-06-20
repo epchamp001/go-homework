@@ -3,9 +3,10 @@ package storage
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"pvz-cli/pkg/logger"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PostgresConfig struct {

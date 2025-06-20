@@ -2,8 +2,9 @@ package storage
 
 import (
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"pvz-cli/pkg/logger"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type StorageConfig struct {

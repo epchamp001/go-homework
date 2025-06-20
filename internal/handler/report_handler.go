@@ -2,9 +2,10 @@ package handler
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
-	"pvz-cli/internal/usecase"
+	"pvz-cli/internal/usecase/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ReportsHandler interface {
@@ -12,10 +13,10 @@ type ReportsHandler interface {
 }
 
 type reportsHandlerImp struct {
-	svc usecase.Service
+	svc service.Service
 }
 
-func NewReportsHandler(svc usecase.Service) *reportsHandlerImp {
+func NewReportsHandler(svc service.Service) *reportsHandlerImp {
 	return &reportsHandlerImp{svc: svc}
 }
 

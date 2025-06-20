@@ -8,6 +8,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"pvz-cli/internal/config"
+	"pvz-cli/internal/handler"
+	"pvz-cli/internal/handler/middleware"
+	"pvz-cli/internal/repository/storage/postgres"
+	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/closer"
+	"pvz-cli/pkg/errs"
+	"pvz-cli/pkg/logger"
+	pvzpb "pvz-cli/pkg/pvz"
+	"pvz-cli/pkg/txmanager"
+
 	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,18 +31,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
-	"net"
-	"net/http"
-	"pvz-cli/internal/config"
-	"pvz-cli/internal/handler"
-	"pvz-cli/internal/handler/middleware"
-	"pvz-cli/internal/repository/storage/postgres"
-	"pvz-cli/internal/usecase"
-	"pvz-cli/pkg/closer"
-	"pvz-cli/pkg/errs"
-	"pvz-cli/pkg/logger"
-	pvzpb "pvz-cli/pkg/pvz"
-	"pvz-cli/pkg/txmanager"
 )
 
 // Server позволяет удобно и аккуратно поднимать весь проект и его зависимости.
@@ -105,7 +106,7 @@ func (s *Server) setupGRPC() {
 	orderRepo := postgres.NewOrdersPostgresRepo(s.txMgr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(s.txMgr)
 
-	svc := usecase.NewService(s.txMgr, orderRepo, hrRepo)
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo)
 
 	hndl := handler.NewReportsHandler(svc)
 

@@ -4,14 +4,16 @@ package config
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
 	"strings"
 
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
+
 	"path/filepath"
 	strgCfg "pvz-cli/internal/config/storage"
 	"pvz-cli/pkg/errs"
+
+	"github.com/joho/godotenv"
 )
 
 // Config объединяет все конфигурации в одну структуру.
