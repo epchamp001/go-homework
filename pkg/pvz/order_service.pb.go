@@ -7,16 +7,15 @@
 package pvzpb
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -1038,7 +1037,7 @@ const file_pvz_order_service_proto_rawDesc = "" +
 	"\rOrderResponse\x12+\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x13.orders.OrderStatusR\x06status\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\x04R\aorderId:<\x92A9\n" +
-	"7J5{\"status\":\"ORDER_STATUS_ACCEPTED\",\"order_id\":\"12345\"}\"t\n" +
+	"7J5{\"status\":\"ORDER_STATUS_RETURNED\",\"order_id\":\"12345\"}\"t\n" +
 	"\rProcessResult\x12\x1c\n" +
 	"\tprocessed\x18\x01 \x03(\x04R\tprocessed\x12\x16\n" +
 	"\x06errors\x18\x02 \x03(\x04R\x06errors:-\x92A*\n" +
