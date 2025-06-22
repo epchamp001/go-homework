@@ -29,9 +29,6 @@ type Service interface {
 	// с фильтрацией onlyInPVZ, lastN, или обычной пагинацией.
 	ListOrders(ctx context.Context, userID string, onlyInPVZ bool, lastN int, pg vo.Pagination) ([]*models.Order, int, error)
 
-	// ScrollOrders возвращает порцию заказов по курсору (key-set пагинация).
-	ScrollOrders(ctx context.Context, userID string, cursor vo.ScrollCursor) ([]*models.Order, vo.ScrollCursor, error)
-
 	// ListReturns возвращает список возвратов (с пагинацией).
 	ListReturns(ctx context.Context, pg vo.Pagination) ([]*models.ReturnRecord, error)
 

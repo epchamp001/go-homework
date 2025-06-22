@@ -48,7 +48,7 @@ func main() {
 	if envPath != "" {
 		fmt.Fprintf(os.Stdout, "Loading environment from: %s\n\n", envPath)
 	} else {
-		fmt.Fprintln(os.Stdout, "No .env file specified; skipping env load\n")
+		fmt.Fprintf(os.Stdout, "No .env file specified; skipping env load\n")
 	}
 
 	cfg, err := config.LoadConfig(cfgPath, envPath)

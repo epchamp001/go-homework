@@ -273,7 +273,20 @@ docker-up:
 docker-down:
 	docker compose down -v
 
-start: docker-up up
+wait-db:
+	@echo "Waiting for master on localhost:5432…"
+	@until pg_isready -h localhost -p 5432 -U gopher >/dev/null 2>&1; do \
+	    printf "."; sleep 1; \
+	done
+	@echo "\nWaiting for replica1 on localhost:5433…"
+	@until pg_isready -h localhost -p 5433 -U gopher >/dev/null 2>&1; do \
+	    printf "."; sleep 1; \
+	done
+	@echo "\nWaiting for replica2 on localhost:5434…"
+	@until pg_isready -h localhost -p 5434 -U gopher >/dev/null 2>&1; do \
+	    printf "."; sleep 1; \
+	done
+	@echo "\nAll databases are ready!"
+
+start-app: docker-up wait-db up
 	go run ./cmd/pvz/main.go --config ./configs/config.yaml --env .env
-
-

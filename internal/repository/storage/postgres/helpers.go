@@ -86,30 +86,6 @@ func scanOrders(rows pgx.Rows) ([]*models.Order, error) {
 	return out, nil
 }
 
-// cursorWhereClause возвращает WHERE и срез args
-func cursorWhereClause(userID, lastID string) (string, []any) {
-	where := "WHERE user_id = $1"
-	args := []any{userID}
-
-	if lastID != "" {
-		where += `
-		  AND (created_at, id) > (
-		        SELECT created_at, id FROM orders WHERE id = $2
-		      )`
-		args = append(args, lastID)
-	}
-	return where, args
-}
-
-// cursorQuery собирает финальную строку запроса
-func cursorQuery(where string, args []any) string {
-	return fmt.Sprintf(`
-		%s
-		%s
-		ORDER BY created_at ASC, id ASC
-		LIMIT $%d;`, selectClause(), where, len(args))
-}
-
 // scanReturnRecords конвертирует pgx.Rows → []*models.ReturnRecord
 func scanReturnRecords(rows pgx.Rows) ([]*models.ReturnRecord, error) {
 	defer rows.Close()

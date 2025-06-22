@@ -161,41 +161,6 @@ func (r *OrdersPostgresRepo) ListByUser(
 	return orders, nil
 }
 
-func (r *OrdersPostgresRepo) NextBatchAfter(
-	ctx context.Context,
-	userID string,
-	cur vo.ScrollCursor,
-) ([]*models.Order, vo.ScrollCursor, error) {
-	exec := r.conn.GetExecutor(ctx)
-
-	limit := cur.Limit
-	if limit <= 0 {
-		limit = 20
-	}
-
-	where, args := cursorWhereClause(userID, cur.LastID)
-	args = append(args, limit)
-	q := cursorQuery(where, args)
-
-	rows, err := exec.Query(ctx, q, args...)
-	if err != nil {
-		return nil, vo.ScrollCursor{}, errs.Wrap(err,
-			errs.CodeDatabaseError, "cursor query failed")
-	}
-
-	orders, err := scanOrders(rows)
-	if err != nil {
-		return nil, vo.ScrollCursor{}, errs.Wrap(err,
-			errs.CodeDatabaseError, "scan failed")
-	}
-
-	var next vo.ScrollCursor
-	if len(orders) == limit {
-		next = vo.ScrollCursor{LastID: orders[limit-1].ID, Limit: limit}
-	}
-	return orders, next, nil
-}
-
 func (r *OrdersPostgresRepo) ImportMany(ctx context.Context, list []*models.Order) error {
 	exec := r.conn.GetExecutor(ctx)
 

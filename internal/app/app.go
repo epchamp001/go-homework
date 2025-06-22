@@ -167,12 +167,15 @@ func (s *Server) runGateway(ctx context.Context) error {
 		}),
 	)
 
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	endpoint := fmt.Sprintf("%s:%d", s.cfg.GRPCServer.Endpoint, s.cfg.GRPCServer.Port)
-	conn, err := grpc.DialContext(ctx, endpoint, opts...)
-	if err != nil {
-		return errs.Wrap(err, errs.CodeInternalError, "failed to dial gRPC endpoint")
 
+	// вместо grpc.DialContext использую grpc.NewClient, так как просит линтер и рекомендуют разрабы)
+	conn, err := grpc.NewClient(
+		endpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return errs.Wrap(err, errs.CodeInternalError, "failed to create gRPC client")
 	}
 
 	s.closer.Add(func(ctx context.Context) error {

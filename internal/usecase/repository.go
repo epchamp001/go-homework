@@ -22,9 +22,6 @@ type OrdersRepository interface {
 	// ListByUser возвращает заказы пользователя
 	ListByUser(ctx context.Context, userID string, onlyInPVZ bool, lastN int, pg *vo.Pagination) ([]*models.Order, error)
 
-	// NextBatchAfter делает бесконечную пагинацию
-	NextBatchAfter(ctx context.Context, userID string, cur vo.ScrollCursor) ([]*models.Order, vo.ScrollCursor, error)
-
 	// ImportMany вставляет пачку заказов
 	ImportMany(ctx context.Context, list []*models.Order) error
 
