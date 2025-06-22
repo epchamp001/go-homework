@@ -122,8 +122,31 @@ func GrpcError(err error) error {
 	if errors.As(err, &ae) {
 		switch ae.Code {
 		case CodeMissingParameter, CodeInvalidParameter:
-			return grpcstatus.Error(codes.InvalidArgument, ae.Error())
+			return grpcstatus.Error(codes.InvalidArgument, ae.Message)
 		}
 	}
 	return nil
+}
+
+// ErrorCause возвращает текст глубинной ошибки
+func ErrorCause(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	root := err
+	for {
+		next := errors.Unwrap(root)
+		if next == nil {
+			break
+		}
+		root = next
+	}
+
+	var ae *AppError
+	if errors.As(root, &ae) {
+		return ae.Message
+	}
+
+	return root.Error()
 }

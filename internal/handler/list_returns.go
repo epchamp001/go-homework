@@ -31,7 +31,8 @@ func (s *OrderServiceServer) ListReturns(
 		if grpcErr := errs.GrpcError(err); grpcErr != nil {
 			return nil, grpcErr
 		}
-		return nil, grpcstatus.Error(codes.Internal, err.Error())
+		cause := errs.ErrorCause(err)
+		return nil, grpcstatus.Error(codes.Internal, cause)
 	}
 
 	pbReturns := make([]*pvzpb.ReturnRecord, 0, len(returnRecords))

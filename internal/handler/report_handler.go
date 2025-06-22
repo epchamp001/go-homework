@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/errs"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,7 +25,12 @@ func (h *reportsHandlerImp) DownloadClientReport(c *gin.Context) {
 	sortBy := c.Query("sortBy")
 	dataBytes, err := h.svc.GenerateClientReportByte(c, sortBy)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "failed to generate report: %v", err)
+		msg := errs.ErrorCause(err)
+		c.String(
+			http.StatusInternalServerError,
+			"failed to generate report: %s",
+			msg,
+		)
 		return
 	}
 

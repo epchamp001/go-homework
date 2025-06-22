@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"pvz-cli/internal/handler/mappers"
+	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
 	"strconv"
 
@@ -42,7 +43,8 @@ func (s *OrderServiceServer) ListOrders(
 			"lastN", lastN,
 			"error", err,
 		)
-		return nil, grpcstatus.Error(codes.Internal, err.Error())
+		cause := errs.ErrorCause(err)
+		return nil, grpcstatus.Error(codes.Internal, cause)
 	}
 
 	pbOrders := make([]*pvzpb.Order, 0, len(domainOrders))

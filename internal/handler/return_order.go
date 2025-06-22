@@ -32,7 +32,9 @@ func (s *OrderServiceServer) ReturnOrder(
 		if grpcErr := errs.GrpcError(err); grpcErr != nil {
 			return nil, grpcErr
 		}
-		return nil, grpcstatus.Error(codes.Internal, err.Error())
+
+		cause := errs.ErrorCause(err)
+		return nil, grpcstatus.Error(codes.Internal, cause)
 	}
 
 	return mappers.DomainToProtoOrderResponse(errCodes.CodeOrderReturned, orderIDStr)

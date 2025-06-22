@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"pvz-cli/internal/handler/mappers"
+	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
 	"strconv"
 
@@ -47,7 +48,8 @@ func (s *OrderServiceServer) ProcessOrders(
 			"user_id", userIDStr,
 			"error", err,
 		)
-		return nil, grpcstatus.Error(codes.Internal, err.Error())
+		cause := errs.ErrorCause(err)
+		return nil, grpcstatus.Error(codes.Internal, cause)
 	}
 
 	protoResult, mapErr := mappers.DomainProcessResultToProtoProcessResult(result)

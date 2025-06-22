@@ -208,7 +208,7 @@ message GetHistoryRequest {
 message OrderResponse {
   option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
     json_schema: {
-      example: "{\"status\":\"ORDER_STATUS_ACCEPTED\",\"order_id\":\"12345\"}"
+      example: "{\"status\":\"ORDER_STATUS_RETURNED\",\"order_id\":\"12345\"}"
     }
   };
 
