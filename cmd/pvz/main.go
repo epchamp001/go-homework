@@ -18,27 +18,40 @@ func main() {
 		os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
-	var cfgPath string
+	var (
+		cfgPath string
+		envPath string
+	)
 	pflag.StringVar(&cfgPath, "config", "", "path to config.yaml (or set $PVZ_CONFIG)")
+	pflag.StringVar(&envPath, "env", "", "path to .env file (or set $PVZ_ENV)")
 	pflag.Parse()
 
+	// config path
 	if cfgPath == "" {
 		cfgPath = os.Getenv("PVZ_CONFIG")
 	}
-
 	if cfgPath == "" {
-		defaultCfg := "configs/default_config.yaml"
+		cfgPath = "configs/default_config.yaml"
 		fmt.Fprintf(os.Stdout,
 			"No config specified; using default: %s\n"+
-				"You can override with --config or $PVZ_CONFIG\n\n",
-			defaultCfg,
+				"Override with --config or $PVZ_CONFIG\n\n",
+			cfgPath,
 		)
-		cfgPath = defaultCfg
 	} else {
-		fmt.Fprintf(os.Stdout, "Using config: %s\n\n", cfgPath)
+		fmt.Fprintf(os.Stdout, "Using config file: %s\n\n", cfgPath)
 	}
 
-	cfg, err := config.LoadConfig(cfgPath)
+	// env path (optional)
+	if envPath == "" {
+		envPath = os.Getenv("PVZ_ENV")
+	}
+	if envPath != "" {
+		fmt.Fprintf(os.Stdout, "Loading environment from: %s\n\n", envPath)
+	} else {
+		fmt.Fprintf(os.Stdout, "No .env file specified; skipping env load\n")
+	}
+
+	cfg, err := config.LoadConfig(cfgPath, envPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
 		os.Exit(1)
@@ -54,9 +67,7 @@ func main() {
 	server := app.NewServer(cfg, log)
 
 	if err := server.Run(ctx); err != nil {
-		log.Fatalw("Failed to start server",
-			"error", err,
-		)
+		log.Fatalw("Failed to start server", "error", err)
 	}
 
 	<-ctx.Done()
@@ -68,9 +79,7 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Errorw("Shutdown failed",
-			"error", err,
-		)
+		log.Errorw("Shutdown failed", "error", err)
 		os.Exit(1)
 	}
 

@@ -1,0 +1,64 @@
+package service
+
+import (
+	"context"
+	"pvz-cli/internal/domain/models"
+	"pvz-cli/pkg/errs"
+	"pvz-cli/pkg/txmanager"
+	"time"
+)
+
+func (s *ServiceImpl) ReturnOrder(ctx context.Context, orderID string) error {
+	if orderID == "" {
+		return errs.New(errs.CodeValidationError, "empty order id")
+	}
+
+	err := s.tx.WithTx(
+		ctx,
+		txmanager.IsolationLevelRepeatableRead,
+		txmanager.AccessModeReadWrite,
+		func(txCtx context.Context) error {
+			o, err := s.ordRepo.Get(txCtx, orderID)
+			if err != nil {
+				return errs.Wrap(err, errs.CodeRecordNotFound, "order not found", "order_id", orderID)
+			}
+
+			if err := validateReturn(o); err != nil {
+				return err
+			}
+
+			now := time.Now()
+
+			rec := &models.ReturnRecord{
+				OrderID:    o.ID,
+				UserID:     o.UserID,
+				ReturnedAt: now,
+			}
+			if err := s.hrRepo.AddReturn(txCtx, rec); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError, "failed to add return", "order_id", orderID)
+			}
+
+			evt := &models.HistoryEvent{
+				OrderID: o.ID,
+				Status:  models.StatusReturned,
+				Time:    now,
+			}
+			if err := s.hrRepo.AddHistory(txCtx, evt); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError, "failed to add history", "order_id", orderID)
+			}
+
+			o.Status = models.StatusReturned
+			o.ReturnedAt = &now
+			if err := s.ordRepo.Update(txCtx, o); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError,
+					"failed to mark order returned", "order_id", orderID)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return errs.Wrap(err, errs.CodeDBTransactionError, "return order tx failed", "order_id", orderID)
+	}
+
+	return nil
+}

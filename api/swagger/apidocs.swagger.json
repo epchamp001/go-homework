@@ -488,7 +488,7 @@
     "ordersOrderResponse": {
       "type": "object",
       "example": {
-        "status": "ORDER_STATUS_ACCEPTED",
+        "status": "ORDER_STATUS_RETURNED",
         "order_id": "12345"
       },
       "properties": {

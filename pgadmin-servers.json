@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "PGMaster",
+      "Group": "Servers",
+      "Host": "postgres-master",
+      "Port": 5432,
+      "MaintenanceDB": "pvz",
+      "Username": "gopher",
+      "Password": "mega_secret_pass_ozon_dev",
+      "SSLMode": "disable"
+    }
+  }
+}

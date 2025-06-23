@@ -2,9 +2,11 @@ package handler
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
-	"pvz-cli/internal/usecase"
+	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/errs"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ReportsHandler interface {
@@ -12,18 +14,23 @@ type ReportsHandler interface {
 }
 
 type reportsHandlerImp struct {
-	svc usecase.Service
+	svc service.Service
 }
 
-func NewReportsHandler(svc usecase.Service) *reportsHandlerImp {
+func NewReportsHandler(svc service.Service) *reportsHandlerImp {
 	return &reportsHandlerImp{svc: svc}
 }
 
 func (h *reportsHandlerImp) DownloadClientReport(c *gin.Context) {
 	sortBy := c.Query("sortBy")
-	dataBytes, err := h.svc.GenerateClientReportByte(sortBy)
+	dataBytes, err := h.svc.GenerateClientReportByte(c, sortBy)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "failed to generate report: %v", err)
+		msg := errs.ErrorCause(err)
+		c.String(
+			http.StatusInternalServerError,
+			"failed to generate report: %s",
+			msg,
+		)
 		return
 	}
 

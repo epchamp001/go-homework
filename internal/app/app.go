@@ -8,8 +8,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"pvz-cli/internal/config"
+	"pvz-cli/internal/handler"
+	"pvz-cli/internal/handler/middleware"
+	"pvz-cli/internal/repository/storage/postgres"
+	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/closer"
+	"pvz-cli/pkg/errs"
+	"pvz-cli/pkg/logger"
+	pvzpb "pvz-cli/pkg/pvz"
+	"pvz-cli/pkg/txmanager"
+
 	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jackc/pgx/v5/pgxpool"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/time/rate"
@@ -17,17 +31,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
-	"net"
-	"net/http"
-	"pvz-cli/internal/config"
-	"pvz-cli/internal/handler"
-	"pvz-cli/internal/handler/middleware"
-	"pvz-cli/internal/repository/storage/filerepo"
-	"pvz-cli/internal/usecase"
-	"pvz-cli/pkg/closer"
-	"pvz-cli/pkg/errs"
-	"pvz-cli/pkg/logger"
-	pvzpb "pvz-cli/pkg/pvz"
 )
 
 // Server позволяет удобно и аккуратно поднимать весь проект и его зависимости.
@@ -37,6 +40,7 @@ type Server struct {
 	log        logger.Logger
 	cfg        *config.Config
 	hndl       handler.ReportsHandler
+	txMgr      txmanager.TxManager
 }
 
 // NewServer создаёт новое приложение с инициализацией хранилища, бизнес-логики и REPL.
@@ -44,7 +48,42 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 	c := closer.NewCloser()
 
 	limiter := rate.NewLimiter(rate.Limit(5), 5)
-	
+
+	masterPool, err := cfg.Storage.ConnectMaster(log)
+	if err != nil {
+		log.Fatalw("connect to master postgres",
+			"error", err)
+	}
+	c.Add(func(ctx context.Context) error {
+		log.Infow("Closing Master PostgreSQL pool")
+		masterPool.Close()
+		return nil
+	})
+
+	replPool1, err := cfg.Storage.ConnectReplica(1, log)
+	if err != nil {
+		log.Fatalw("connect to replica1 postgres",
+			"error", err)
+	}
+	c.Add(func(ctx context.Context) error {
+		log.Infow("Closing Replica 1 PostgreSQL pool")
+		replPool1.Close()
+		return nil
+	})
+
+	replPool2, err := cfg.Storage.ConnectReplica(1, log)
+	if err != nil {
+		log.Fatalw("connect to replica2 postgres",
+			"error", err)
+	}
+	c.Add(func(ctx context.Context) error {
+		log.Infow("Closing Replica 2 PostgreSQL pool")
+		replPool2.Close()
+		return nil
+	})
+
+	tx := txmanager.NewTransactor(masterPool, []*pgxpool.Pool{replPool1, replPool2}, log)
+
 	grpcSrv := grpc.NewServer(
 		grpc.UnaryInterceptor(middleware.RateLimitInterceptor(limiter)),
 	)
@@ -55,6 +94,7 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 		grpcServer: grpcSrv,
 		log:        log,
 		cfg:        cfg,
+		txMgr:      tx,
 	}
 
 	s.setupGRPC()
@@ -63,20 +103,16 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 }
 
 func (s *Server) setupGRPC() {
-	repo, err := filerepo.NewFileRepo("data")
-	if err != nil {
-		s.log.Fatalw("could not create repo",
-			"error", err,
-		)
-	}
+	orderRepo := postgres.NewOrdersPostgresRepo(s.txMgr)
+	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(s.txMgr)
 
-	svc := usecase.NewService(repo)
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo)
 
 	hndl := handler.NewReportsHandler(svc)
 
 	s.hndl = hndl
 
-	handler.RegisterOrderService(s.grpcServer, svc)
+	handler.RegisterOrderService(s.grpcServer, svc, s.log)
 }
 
 // Run запускает REPL-приложение, обрабатывающее пользовательские команды.
@@ -131,12 +167,15 @@ func (s *Server) runGateway(ctx context.Context) error {
 		}),
 	)
 
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	endpoint := fmt.Sprintf("%s:%d", s.cfg.GRPCServer.Endpoint, s.cfg.GRPCServer.Port)
-	conn, err := grpc.DialContext(ctx, endpoint, opts...)
-	if err != nil {
-		return errs.Wrap(err, errs.CodeInternalError, "failed to dial gRPC endpoint")
 
+	// вместо grpc.DialContext использую grpc.NewClient, так как просит линтер и рекомендуют разрабы)
+	conn, err := grpc.NewClient(
+		endpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return errs.Wrap(err, errs.CodeInternalError, "failed to create gRPC client")
 	}
 
 	s.closer.Add(func(ctx context.Context) error {
@@ -218,23 +257,6 @@ func (s *Server) setupRoutes(gw http.Handler) *gin.Engine {
 	r.GET("/v1/reports/clients", s.hndl.DownloadClientReport)
 
 	return r
-}
-
-func setupHTTPRoutes(r *gin.Engine, svc usecase.Service) {
-	r.GET("/v1/reports/clients/raw", func(c *gin.Context) {
-
-		sortBy := c.Query("sortBy")
-
-		dataBytes, err := svc.GenerateClientReportByte(sortBy)
-		if err != nil {
-			c.String(http.StatusInternalServerError, "failed to generate report: %v", err)
-			return
-		}
-		c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-		c.Header("Content-Disposition", "attachment; filename=clients_report.xlsx")
-		c.Header("Content-Length", fmt.Sprintf("%d", len(dataBytes)))
-		c.Writer.Write(dataBytes)
-	})
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  postgres-master:
+    image: bitnami/postgresql:latest
+    container_name: postgres-master
+    env_file:
+      - .env
+    environment:
+      POSTGRESQL_REPLICATION_MODE: master
+      POSTGRESQL_REPLICATION_USER: ${PG_REPL_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${PG_REPL_PASSWORD}
+      POSTGRESQL_USERNAME: ${PG_SUPER_USER}
+      POSTGRESQL_PASSWORD: ${PG_SUPER_PASSWORD}
+      POSTGRESQL_DATABASE: ${PG_DATABASE}
+      POSTGRESQL_POSTGRES_PASSWORD: ${SUPER_POSTGRES_PASSWORD}
+    ports:
+      - "${PG_MASTER_PORT}:5432"
+    volumes:
+      - postgres-master-data:/bitnami/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_SUPER_USER} -d ${PG_DATABASE}"]
+      interval: 5s
+      retries: 5
+    networks:
+      - pvz-network
+
+  postgres-replica1:
+    image: bitnami/postgresql:latest
+    container_name: postgres-replica1
+    ports:
+      - "5433:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${PG_REPL_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${PG_REPL_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-master
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+      POSTGRESQL_PASSWORD: ${PG_SUPER_PASSWORD}
+      POSTGRESQL_POSTGRES_PASSWORD: ${SUPER_POSTGRES_PASSWORD}
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+    volumes:
+      - postgres-replica1-data:/bitnami/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_SUPER_USER}"]
+      interval: 5s
+      retries: 5
+    networks:
+      - pvz-network
+
+  postgres-replica2:
+    image: bitnami/postgresql:latest
+    container_name: postgres-replica2
+    ports:
+      - "5434:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_REPLICATION_USER: ${PG_REPL_USER}
+      POSTGRESQL_REPLICATION_PASSWORD: ${PG_REPL_PASSWORD}
+      POSTGRESQL_MASTER_HOST: postgres-master
+      POSTGRESQL_MASTER_PORT_NUMBER: 5432
+      POSTGRESQL_PASSWORD: ${PG_SUPER_PASSWORD}
+      POSTGRESQL_POSTGRES_PASSWORD: ${SUPER_POSTGRES_PASSWORD}
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+    volumes:
+      - postgres-replica2-data:/bitnami/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_SUPER_USER}"]
+      interval: 5s
+      retries: 5
+    networks:
+      - pvz-network
+
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4:8.4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "5050:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - pvz-network
+
+volumes:
+  postgres-master-data:
+  postgres-replica1-data:
+  postgres-replica2-data:
+  pgadmin-data:
+
+networks:
+  pvz-network:
+    driver: bridge
