@@ -3,23 +3,35 @@ package packaging
 import (
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
+	"sync"
 )
 
-// Registry содержит стратегии упаковки, сопоставляя тип упаковки с соответствующей реализацией PackagingStrategy.
-var Registry = map[models.PackageType]PackagingStrategy{}
-
-func init() {
-	Registry[models.PackageNone] = NewCompositeStrategy()
-	Registry[models.PackageBag] = NewBagStrategy()
-	Registry[models.PackageBox] = NewBoxStrategy()
-	Registry[models.PackageFilm] = NewFilmStrategy()
-	Registry[models.PackageBagFilm] = NewCompositeStrategy(NewBagStrategy(), NewFilmStrategy())
-	Registry[models.PackageBoxFilm] = NewCompositeStrategy(NewBoxStrategy(), NewFilmStrategy())
+type Provider interface {
+	Strategy(models.PackageType) (PackagingStrategy, error)
 }
 
-// GetStrategy возвращает упаковочную стратегию по типу.
-func GetStrategy(pkg models.PackageType) (PackagingStrategy, error) {
-	strat, ok := Registry[pkg]
+type defaultProvider struct {
+	mu   sync.RWMutex
+	regs map[models.PackageType]PackagingStrategy
+}
+
+func NewDefaultProvider() Provider {
+	return &defaultProvider{
+		regs: map[models.PackageType]PackagingStrategy{
+			models.PackageNone:    NewCompositeStrategy(),
+			models.PackageBag:     NewBagStrategy(),
+			models.PackageBox:     NewBoxStrategy(),
+			models.PackageFilm:    NewFilmStrategy(),
+			models.PackageBagFilm: NewCompositeStrategy(NewBagStrategy(), NewFilmStrategy()),
+			models.PackageBoxFilm: NewCompositeStrategy(NewBoxStrategy(), NewFilmStrategy()),
+		},
+	}
+}
+
+func (p *defaultProvider) Strategy(t models.PackageType) (PackagingStrategy, error) {
+	p.mu.RLock()
+	strat, ok := p.regs[t]
+	p.mu.RUnlock()
 	if !ok {
 		return nil, codes.ErrInvalidPackage
 	}

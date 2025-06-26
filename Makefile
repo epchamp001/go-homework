@@ -290,3 +290,27 @@ wait-db:
 
 start-app: docker-up wait-db up
 	go run ./cmd/pvz/main.go --config ./configs/config.yaml --env .env
+
+# Пример команды:
+# make mocks INTERFACE=./internal/usecase.OrdersRepository OUT=./internal/usecase/mock/orders_repo_mock.go MOCK_NAME=OrdersRepositoryMock
+mocks:
+	@echo "=> Generating mock for $(INTERFACE) into $(OUT)"
+	@mkdir -p $(dir $(OUT))
+	minimock -i $(INTERFACE) -o $(OUT) -n $(MOCK_NAME)
+
+
+.PHONY: tests coverage
+
+tests:
+	go test -count=5 ./...
+
+# Путь для сохранения отчётов покрытия
+COVDIR ?= coverage
+COVFILE := $(COVDIR)/coverage.out
+COVHTML := $(COVDIR)/coverage.html
+
+coverage:
+	@mkdir -p $(COVDIR)
+	go test -v -coverprofile=$(COVFILE) ./...
+	go tool cover -html=$(COVFILE) -o $(COVHTML)
+

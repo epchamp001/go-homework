@@ -4,6 +4,7 @@ package service
 import (
 	"context"
 	"pvz-cli/internal/usecase"
+	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/pkg/txmanager"
 	"time"
 
@@ -43,15 +44,17 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	tx      txmanager.TxManager
-	ordRepo usecase.OrdersRepository
-	hrRepo  usecase.HistoryAndReturnsRepository
+	tx         txmanager.TxManager
+	ordRepo    usecase.OrdersRepository
+	hrRepo     usecase.HistoryAndReturnsRepository
+	strategies packaging.Provider
 }
 
-func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository) *ServiceImpl {
+func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository, prov packaging.Provider) *ServiceImpl {
 	return &ServiceImpl{
-		tx:      tx,
-		ordRepo: ordRepo,
-		hrRepo:  hrRepo,
+		tx:         tx,
+		ordRepo:    ordRepo,
+		hrRepo:     hrRepo,
+		strategies: prov,
 	}
 }
