@@ -13,7 +13,6 @@ import (
 const (
 	orderID uint64              = 100
 	userID  uint64              = 200
-	priceR                      = 500.00
 	priceK  models.PriceKopecks = 500_00
 )
 
