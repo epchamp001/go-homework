@@ -1,0 +1,51 @@
+- id: 300
+  user_id: 400
+  status: ACCEPTED
+  expires_at: "2030-12-31T12:00:00Z"
+  created_at: "2025-06-28T10:00:00Z"
+  package: bag
+  weight: 1.0
+  price: 50000
+  total_price: 50500
+
+- id: 108
+  user_id: 200
+  status: ISSUED
+  expires_at: "2025-07-10T12:00:00Z"
+  created_at: "2025-06-27T09:00:00Z"
+  issued_at: "2025-06-27T10:00:00Z"
+  package: bag
+  weight: 1.0
+  price: 50000
+  total_price: 50500
+
+- id: 109
+  user_id: 200
+  status: ISSUED
+  expires_at: "2025-07-10T12:00:00Z"
+  created_at: "2025-06-25T09:00:00Z"
+  issued_at: "2025-06-25T10:00:00Z"  # >72 ч
+  package: bag
+  weight: 1.0
+  price: 50000
+  total_price: 50500
+
+- id: 110
+  user_id: 200
+  status: ACCEPTED
+  expires_at: "2025-06-27T00:00:00Z"  # истёкший
+  created_at: "2025-06-25T00:00:00Z"
+  package: "bag"
+  weight: 1.0
+  price: 50000
+  total_price: 50500
+
+- id: 800
+  user_id: 300
+  status: ACCEPTED
+  expires_at: "2025-07-01T12:00:00Z"
+  created_at: "2025-06-28T10:00:00Z"
+  package: bag
+  weight: 1.0
+  price: 50000
+  total_price: 50500
