@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
+	"os"
+	"path/filepath"
 	"pvz-cli/internal/app"
 	"pvz-cli/internal/config"
 	"pvz-cli/internal/config/storage"
@@ -19,8 +22,10 @@ import (
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/tests/integration/testutil"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
+	"text/template"
 	"time"
 )
 
@@ -31,6 +36,8 @@ type TestSuite struct {
 	psqlContainer *testutil.PostgreSQLContainer
 	masterPool    *pgxpool.Pool
 	svc           service.Service
+
+	fixtureNow time.Time
 }
 
 func (s *TestSuite) SetupSuite() {
@@ -90,6 +97,8 @@ func (s *TestSuite) SetupSuite() {
 
 	svc := service.NewService(txmngr, orderRepo, hrRepo, strategyProvider)
 	s.svc = svc
+
+	s.fixtureNow = time.Date(2025, 6, 28, 10, 0, 0, 0, time.UTC)
 }
 
 func (s *TestSuite) TearDownTest() {
@@ -118,6 +127,57 @@ func (s *TestSuite) loadFixtures() {
 	dbCleanupMu.Lock()
 	defer dbCleanupMu.Unlock()
 
+	// создаём временную директорию
+	tmpDir, err := os.MkdirTemp("", "fixtures-")
+	s.Require().NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	// FuncMap возвращает готовые строки в формате RFC3339
+	fm := template.FuncMap{
+		"now": func() string {
+			return s.fixtureNow.Format(time.RFC3339)
+		},
+		"add": func(d string) string {
+			dur, _ := time.ParseDuration(d)
+			return s.fixtureNow.Add(dur).Format(time.RFC3339)
+		},
+		"sub": func(d string) string {
+			dur, _ := time.ParseDuration(d)
+			return s.fixtureNow.Add(-dur).Format(time.RFC3339)
+		},
+	}
+
+	// обходим только файлы-шаблоны *.yaml.tmpl
+	err = filepath.Walk("fixtures/storage", func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		if !(strings.HasSuffix(info.Name(), ".yml.tmpl") ||
+			strings.HasSuffix(info.Name(), ".yaml.tmpl")) {
+			return nil
+		}
+
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		tmpl := template.Must(template.New(info.Name()).Funcs(fm).Parse(string(src)))
+
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, nil); err != nil {
+			return err
+		}
+
+		rel, _ := filepath.Rel("fixtures/storage", path)
+		outPath := filepath.Join(tmpDir, strings.TrimSuffix(rel, ".tmpl"))
+		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(outPath, buf.Bytes(), info.Mode())
+	})
+	s.Require().NoError(err)
+
+	// подключаемся к БД и загружаем отрендеренные фикстуры
 	db, err := sql.Open("postgres", s.psqlContainer.GetDSN())
 	s.Require().NoError(err)
 	defer db.Close()
@@ -125,7 +185,7 @@ func (s *TestSuite) loadFixtures() {
 	fixtures, err := testfixtures.New(
 		testfixtures.Database(db),
 		testfixtures.Dialect("postgres"),
-		testfixtures.Directory("fixtures/storage"),
+		testfixtures.Directory(tmpDir),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(fixtures.Load())

@@ -1,0 +1,27 @@
+- order_id: 300
+  status: ACCEPTED
+  event_time: '{{ now }}'
+
+- order_id: 108
+  status: ISSUED
+  event_time: '{{ sub "24h" }}'
+
+- order_id: 108
+  status: ACCEPTED
+  event_time: '{{ sub "25h" }}'
+
+- order_id: 109
+  status: ISSUED
+  event_time: '{{ sub "72h" }}'
+
+- order_id: 109
+  status: ACCEPTED
+  event_time: '{{ sub "73h" }}'
+
+- order_id: 110
+  status: ACCEPTED
+  event_time: '{{ sub "82h" }}'
+
+- order_id: 800
+  status: ACCEPTED
+  event_time: '{{ now }}'

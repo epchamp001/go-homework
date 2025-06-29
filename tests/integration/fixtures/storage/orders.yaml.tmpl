@@ -1,8 +1,8 @@
 - id: 300
   user_id: 400
   status: ACCEPTED
-  expires_at: "2030-12-31T12:00:00Z"
-  created_at: "2025-06-28T10:00:00Z"
+  expires_at: '{{ add "240h" }}'
+  created_at: '{{ now }}'
   package: bag
   weight: 1.0
   price: 50000
@@ -11,9 +11,9 @@
 - id: 108
   user_id: 200
   status: ISSUED
-  expires_at: "2025-07-10T12:00:00Z"
-  created_at: "2025-06-27T09:00:00Z"
-  issued_at: "2025-06-27T10:00:00Z"
+  expires_at: '{{ add "240h" }}'
+  created_at: '{{ sub "1h" }}'
+  issued_at:  '{{ sub "1h" }}'
   package: bag
   weight: 1.0
   price: 50000
@@ -22,9 +22,9 @@
 - id: 109
   user_id: 200
   status: ISSUED
-  expires_at: "2025-07-10T12:00:00Z"
-  created_at: "2025-06-25T09:00:00Z"
-  issued_at: "2025-06-25T10:00:00Z"  # >72 ч
+  expires_at: '{{ add "240h" }}'
+  created_at: '{{ sub "73h" }}'
+  issued_at:  '{{ sub "72h" }}'
   package: bag
   weight: 1.0
   price: 50000
@@ -33,9 +33,9 @@
 - id: 110
   user_id: 200
   status: ACCEPTED
-  expires_at: "2025-06-27T00:00:00Z"  # истёкший
-  created_at: "2025-06-25T00:00:00Z"
-  package: "bag"
+  expires_at: '{{ sub "34h" }}'
+  created_at: '{{ sub "82h" }}'
+  package: bag
   weight: 1.0
   price: 50000
   total_price: 50500
@@ -43,8 +43,8 @@
 - id: 800
   user_id: 300
   status: ACCEPTED
-  expires_at: "2025-07-01T12:00:00Z"
-  created_at: "2025-06-28T10:00:00Z"
+  expires_at: '{{ add "240h" }}'
+  created_at: '{{ now }}'
   package: bag
   weight: 1.0
   price: 50000
