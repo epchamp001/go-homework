@@ -302,7 +302,19 @@ mocks:
 .PHONY: tests coverage
 
 tests:
-	go test -count=5 ./...
+	go test -tags "integration e2e" -count=5 ./...
+
+
+unit-tests:
+	go test -v -count=5 ./...
+
+
+integration-tests:
+	go test -tags=integration ./...
+
+
+e2e-tests:
+	go test -tags=e2e ./...
 
 # Путь для сохранения отчётов покрытия
 COVDIR ?= coverage
