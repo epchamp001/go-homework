@@ -9,8 +9,6 @@ import (
 	"pvz-cli/internal/config"
 	"syscall"
 	"time"
-
-	"github.com/spf13/pflag"
 )
 
 func main() {
@@ -18,39 +16,8 @@ func main() {
 		os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
-	var (
-		cfgPath string
-		envPath string
-	)
-	pflag.StringVar(&cfgPath, "config", "", "path to config.yaml (or set $PVZ_CONFIG)")
-	pflag.StringVar(&envPath, "env", "", "path to .env file (or set $PVZ_ENV)")
-	pflag.Parse()
-
-	// config path
-	if cfgPath == "" {
-		cfgPath = os.Getenv("PVZ_CONFIG")
-	}
-	if cfgPath == "" {
-		cfgPath = "configs/default_config.yaml"
-		fmt.Fprintf(os.Stdout,
-			"No config specified; using default: %s\n"+
-				"Override with --config or $PVZ_CONFIG\n\n",
-			cfgPath,
-		)
-	} else {
-		fmt.Fprintf(os.Stdout, "Using config file: %s\n\n", cfgPath)
-	}
-
-	// env path (optional)
-	if envPath == "" {
-		envPath = os.Getenv("PVZ_ENV")
-	}
-	if envPath != "" {
-		fmt.Fprintf(os.Stdout, "Loading environment from: %s\n\n", envPath)
-	} else {
-		fmt.Fprintf(os.Stdout, "No .env file specified; skipping env load\n")
-	}
-
+	cfgPath, envPath := setupFlags()
+	
 	cfg, err := config.LoadConfig(cfgPath, envPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)

@@ -14,6 +14,7 @@ import (
 	"pvz-cli/internal/handler"
 	"pvz-cli/internal/handler/middleware"
 	"pvz-cli/internal/repository/storage/postgres"
+	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
 	"pvz-cli/pkg/closer"
 	"pvz-cli/pkg/errs"
@@ -106,7 +107,9 @@ func (s *Server) setupGRPC() {
 	orderRepo := postgres.NewOrdersPostgresRepo(s.txMgr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(s.txMgr)
 
-	svc := service.NewService(s.txMgr, orderRepo, hrRepo)
+	strategyProvider := packaging.NewDefaultProvider()
+
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo, strategyProvider)
 
 	hndl := handler.NewReportsHandler(svc)
 

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"pvz-cli/internal/domain/models"
-	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"time"
@@ -23,7 +22,7 @@ func (s *ServiceImpl) AcceptOrder(
 	}
 
 	// расчёт наценки
-	strat, err := packaging.GetStrategy(pkgType)
+	strat, err := s.strategies.Strategy(pkgType)
 	if err != nil {
 		return 0, errs.Wrap(err, errs.CodeValidationError, "invalid package type")
 	}

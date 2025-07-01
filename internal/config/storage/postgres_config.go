@@ -40,20 +40,22 @@ func (pc *PostgresConfig) connect(ep PostgresEndpoint, log logger.Logger) (*pgxp
 		return nil, fmt.Errorf("create pool: %w", err)
 	}
 
-	// попытки подключиться
-	for i := 0; i < pc.ConnectionAttempts; i++ {
-		if err := pool.Ping(context.Background()); err == nil {
+	for i := 1; i <= pc.ConnectionAttempts; i++ {
+		pingErr := pool.Ping(context.Background())
+		if pingErr == nil {
 			log.Infow("Successfully connected to PostgreSQL",
 				"host", ep.Host,
 				"port", ep.Port,
+				"attempt", i,
 			)
-			return pool, nil // успех
+			return pool, nil
 		}
+
 		log.Warnw("PostgreSQL ping failed",
 			"host", ep.Host,
 			"port", ep.Port,
-			"attempt", i+1,
-			"error", err,
+			"attempt", i,
+			"error", pingErr,
 		)
 		time.Sleep(2 * time.Second)
 	}

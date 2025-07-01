@@ -10,6 +10,7 @@ import (
 	"pvz-cli/pkg/txmanager"
 	"strings"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -71,16 +72,27 @@ const (
 func (r *OrdersPostgresRepo) Create(ctx context.Context, o *models.Order) error {
 	exec := r.conn.GetExecutor(ctx)
 
-	if _, err := exec.Exec(ctx,
+	_, err := exec.Exec(ctx,
 		insertOrderSQL,
 		o.ID, o.UserID, o.Status, o.ExpiresAt,
 		o.IssuedAt, o.ReturnedAt, o.CreatedAt,
 		o.Package, o.Weight, o.Price, o.TotalPrice,
-	); err != nil {
-		return errs.Wrap(err, errs.CodeDatabaseError,
-			"failed to insert order", "order_id", o.ID)
+	)
+	if err == nil {
+		return nil
 	}
-	return nil
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+		return codes.ErrOrderAlreadyExists
+	}
+
+	return errs.Wrap(
+		err,
+		errs.CodeDatabaseError,
+		"failed to insert order",
+		"order_id", o.ID,
+	)
 }
 
 func (r *OrdersPostgresRepo) Update(ctx context.Context, o *models.Order) error {

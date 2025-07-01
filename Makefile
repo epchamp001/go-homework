@@ -13,7 +13,7 @@ linter:
 	golangci-lint run --config=$(LINT_CONFIG)
 
 build:
-	go build -o $(BINARY_NAME) cmd/pvz/main.go
+	go build -o $(BINARY_NAME) cmd/pvz/main.go cmd/pvz/setup_flag.go
 
 start:
 	./$(BINARY_NAME)
@@ -289,4 +289,43 @@ wait-db:
 	@echo "\nAll databases are ready!"
 
 start-app: docker-up wait-db up
-	go run ./cmd/pvz/main.go --config ./configs/config.yaml --env .env
+	go run ./cmd/pvz/main.go ./cmd/pvz/setup_flag.go --config ./configs/config.yaml --env .env
+
+# Пример команды:
+# make mocks INTERFACE=./internal/usecase.OrdersRepository OUT=./internal/usecase/mock/orders_repo_mock.go MOCK_NAME=OrdersRepositoryMock
+mocks:
+	@echo "=> Generating mock for $(INTERFACE) into $(OUT)"
+	@mkdir -p $(dir $(OUT))
+	minimock -i $(INTERFACE) -o $(OUT) -n $(MOCK_NAME)
+
+
+.PHONY: tests coverage
+
+tests:
+	go test -tags "integration e2e" -count=5 ./...
+
+
+unit-tests:
+	go test -v -count=5 ./...
+
+
+integration-tests:
+	go test -tags=integration ./...
+
+
+e2e-tests:
+	go test -tags=e2e ./...
+
+# Путь для сохранения отчётов покрытия
+COVDIR ?= coverage
+COVFILE := $(COVDIR)/coverage.out
+COVHTML := $(COVDIR)/coverage.html
+
+coverage:
+	@mkdir -p $(COVDIR)
+	go test -v -coverprofile=$(COVFILE) ./...
+	go tool cover -html=$(COVFILE) -o $(COVHTML)
+
+local-run:
+	go run ./cmd/pvz/main.go ./cmd/pvz/setup_flag.go --config ./configs/config.yaml --env .env
+
