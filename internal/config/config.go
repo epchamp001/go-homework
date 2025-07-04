@@ -22,6 +22,8 @@ type Config struct {
 	GRPCServer GRPCServerConfig `mapstructure:"grpc_server"`
 	Gateway    GatewayConfig    `mapstructure:"gateway"`
 	Storage    strgCfg.StorageConfig
+	Workers    WorkersConfig `mapstructure:"workers"`
+	Admin      AdminConfig   `mapstructure:"admin"`
 }
 
 // LoadConfig загружает и распаковывает конфигурацию по указанному пути.
@@ -54,6 +56,9 @@ func LoadConfig(configPath, envPath string) (*Config, error) {
 	bind("storage.postgres.replicas[0].password", "PG_REPL_PASSWORD")
 	bind("storage.postgres.replicas[1].username", "PG_REPL_USER")
 	bind("storage.postgres.replicas[1].password", "PG_REPL_PASSWORD")
+
+	bind("admin.user",  "ADMIN_USER")
+	bind("admin.pass",  "ADMIN_PASS")
 
 	if ext := filepath.Ext(configPath); ext == ".yaml" || ext == ".yml" {
 		v.SetConfigFile(configPath)

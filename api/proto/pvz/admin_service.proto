@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package admin;
+
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "pvz-cli/pkg/pvz;pvzpb";
+
+service AdminService {
+  rpc ResizePool (ResizeRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/admin/resizePool"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary:     "Resize worker-pool"
+      operation_id: "Admin_ResizePool"
+      tags: "admin"
+      security: { security_requirement: { key: "basicAuth" } }
+    };
+  }
+}
+
+message ResizeRequest {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: { example: "{\"size\":16}" }
+  };
+
+  // Новое количество воркеров (1 … 100)
+  uint32 size = 1 [
+    (validate.rules).uint32 = { gt: 0, lte: 100 }
+  ];
+}
