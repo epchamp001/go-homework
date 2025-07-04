@@ -17,7 +17,7 @@ func main() {
 	defer stop()
 
 	cfgPath, envPath := setupFlags()
-	
+
 	cfg, err := config.LoadConfig(cfgPath, envPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)

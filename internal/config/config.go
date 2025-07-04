@@ -18,10 +18,10 @@ import (
 
 // Config объединяет все конфигурации в одну структуру.
 type Config struct {
-	Logging    LoggingConfig         `mapstructure:"logging"`
-	GRPCServer GRPCServerConfig      `mapstructure:"grpc_server"`
-	Gateway    GatewayConfig         `mapstructure:"gateway"`
-	Storage    strgCfg.StorageConfig `mapstructure:"storage"`
+	Logging    LoggingConfig    `mapstructure:"logging"`
+	GRPCServer GRPCServerConfig `mapstructure:"grpc_server"`
+	Gateway    GatewayConfig    `mapstructure:"gateway"`
+	Storage    strgCfg.StorageConfig
 }
 
 // LoadConfig загружает и распаковывает конфигурацию по указанному пути.
