@@ -7,15 +7,16 @@
 package pvzpb
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -1103,9 +1104,11 @@ const file_pvz_order_service_proto_rawDesc = "" +
 	"\vListReturns\x12\x1a.orders.ListReturnsRequest\x1a\x13.orders.ReturnsList\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/orders/returns\x12]\n" +
 	"\n" +
 	"GetHistory\x12\x19.orders.GetHistoryRequest\x1a\x18.orders.OrderHistoryList\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/orders/history\x12_\n" +
-	"\fImportOrders\x12\x1b.orders.ImportOrdersRequest\x1a\x14.orders.ImportResult\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/orders/importB\x8f\x02\x92A\xf8\x01\x12\xbe\x01\n" +
+	"\fImportOrders\x12\x1b.orders.ImportOrdersRequest\x1a\x14.orders.ImportResult\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/orders/importB\xa2\x02\x92A\x8b\x02\x12\xbe\x01\n" +
 	"\x13Order Pick-Up Point\x12]API для управления процессами Пункта Выдачи Заказов\"C\n" +
-	"\fEgor Ponyaev\x12\x1dhttps://github.com/epchamp001\x1a\x14epchamp001@gmail.com2\x031.0\x1a\x0elocalhost:8080*\x01\x012\x10application/json:\x10application/jsonZ\x11api/pkg/pvz;pvzpbb\x06proto3"
+	"\fEgor Ponyaev\x12\x1dhttps://github.com/epchamp001\x1a\x14epchamp001@gmail.com2\x031.0\x1a\x0elocalhost:8080*\x01\x012\x10application/json:\x10application/jsonZ\x11\n" +
+	"\x0f\n" +
+	"\tbasicAuth\x12\x02\b\x01Z\x11api/pkg/pvz;pvzpbb\x06proto3"
 
 var (
 	file_pvz_order_service_proto_rawDescOnce sync.Once

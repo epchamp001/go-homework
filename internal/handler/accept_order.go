@@ -5,6 +5,7 @@ import (
 	"pvz-cli/internal/handler/mappers"
 	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
+	"pvz-cli/pkg/wpool"
 
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -29,30 +30,45 @@ func (s *OrderServiceServer) AcceptOrder(
 		return nil, grpcstatus.Error(codes.Internal, err.Error())
 	}
 
-	_, err = s.svc.AcceptOrder(
-		ctx,
-		domainOrder.ID,
-		domainOrder.UserID,
-		domainOrder.ExpiresAt,
-		domainOrder.Weight,
-		domainOrder.Price,
-		domainOrder.Package,
-	)
-	if err != nil {
-		// логируем только ошибку svc
-		s.log.Errorw("AcceptOrder service error",
-			"order_id", domainOrder.ID,
-			"error", err,
-		)
-		if grpcErr := errs.GrpcError(err); grpcErr != nil {
-			return nil, grpcErr
-		}
-		cause := errs.ErrorCause(err)
-		return nil, grpcstatus.Error(codes.Internal, cause)
-	}
+	resCh := make(chan wpool.Response, 1)
 
-	return &pvzpb.OrderResponse{
-		Status:  pvzpb.OrderStatus_ORDER_STATUS_EXPECTS,
-		OrderId: req.OrderId,
-	}, nil
+	s.wp.Submit(wpool.Job{
+		Ctx:    ctx,
+		Result: resCh,
+		Do: func(c context.Context) (any, error) {
+			_, err := s.svc.AcceptOrder(
+				c,
+				domainOrder.ID,
+				domainOrder.UserID,
+				domainOrder.ExpiresAt,
+				domainOrder.Weight,
+				domainOrder.Price,
+				domainOrder.Package,
+			)
+			return nil, err
+		},
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, grpcstatus.Error(codes.Canceled, ctx.Err().Error())
+
+	case r := <-resCh:
+		if r.Err != nil {
+			s.log.Errorw("AcceptOrder service error",
+				"order_id", domainOrder.ID,
+				"error", r.Err,
+			)
+			if grpcErr := errs.GrpcError(r.Err); grpcErr != nil {
+				return nil, grpcErr
+			}
+			cause := errs.ErrorCause(r.Err)
+			return nil, grpcstatus.Error(codes.Internal, cause)
+		}
+
+		return &pvzpb.OrderResponse{
+			Status:  pvzpb.OrderStatus_ORDER_STATUS_EXPECTS,
+			OrderId: req.OrderId,
+		}, nil
+	}
 }

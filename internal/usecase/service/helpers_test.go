@@ -1,11 +1,12 @@
 package service
 
 import (
-	"github.com/stretchr/testify/assert"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSortReports(t *testing.T) {

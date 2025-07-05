@@ -57,8 +57,8 @@ func LoadConfig(configPath, envPath string) (*Config, error) {
 	bind("storage.postgres.replicas[1].username", "PG_REPL_USER")
 	bind("storage.postgres.replicas[1].password", "PG_REPL_PASSWORD")
 
-	bind("admin.user",  "ADMIN_USER")
-	bind("admin.pass",  "ADMIN_PASS")
+	bind("admin.user", "ADMIN_USER")
+	bind("admin.pass", "ADMIN_PASS")
 
 	if ext := filepath.Ext(configPath); ext == ".yaml" || ext == ".yml" {
 		v.SetConfigFile(configPath)

@@ -7,15 +7,16 @@
 package pvzpb
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -83,7 +84,10 @@ const file_pvz_admin_service_proto_rawDesc = "" +
 	"ResizePool\x12\x14.admin.ResizeRequest\x1a\x16.google.protobuf.Empty\"`\x92A>\n" +
 	"\x05admin\x12\x12Resize worker-pool*\x10Admin_ResizePoolb\x0f\n" +
 	"\r\n" +
-	"\tbasicAuth\x12\x00\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/admin/resizePoolB\x17Z\x15pvz-cli/pkg/pvz;pvzpbb\x06proto3"
+	"\tbasicAuth\x12\x00\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/admin/resizePoolBG\x92A-\x12\x14\n" +
+	"\rAdmin Service2\x031.0*\x02\x01\x02Z\x11\n" +
+	"\x0f\n" +
+	"\tbasicAuth\x12\x02\b\x01Z\x15pvz-cli/pkg/pvz;pvzpbb\x06proto3"
 
 var (
 	file_pvz_admin_service_proto_rawDescOnce sync.Once

@@ -4,11 +4,12 @@ package integration
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TestSuite) TestIssueOrders_ErrNotFound() {

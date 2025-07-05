@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"pvz-cli/pkg/logger"
 	"sync"
 )
 
@@ -24,13 +25,15 @@ type Pool struct {
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 	size   int
+	log    logger.Logger
 }
 
-func NewWorkerPool(size, queueLen int) *Pool {
+func NewWorkerPool(size, queueLen int, log logger.Logger) *Pool {
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &Pool{
 		jobs:   make(chan Job, queueLen),
 		cancel: cancel,
+		log:    log,
 	}
 	p.resizeLocked(ctx, size)
 	return p
@@ -54,6 +57,7 @@ func (p *Pool) Stop() {
 var errPoison = errors.New("stop") // пилюля для остановки лишних воркеров
 
 func (p *Pool) resizeLocked(ctx context.Context, n int) {
+	oldSize := p.size
 	delta := n - p.size
 	switch {
 	case delta > 0:
@@ -73,6 +77,11 @@ func (p *Pool) resizeLocked(ctx context.Context, n int) {
 		}
 	}
 	p.size = n
+	p.log.Infow("pool resized",
+		"old", oldSize,
+		"new", n,
+		"delta", delta,
+	)
 }
 
 func (p *Pool) worker(ctx context.Context) {

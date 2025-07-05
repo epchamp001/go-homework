@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/spf13/pflag"
 	"os"
+
+	"github.com/spf13/pflag"
 )
 
 func setupFlags() (string, string) {

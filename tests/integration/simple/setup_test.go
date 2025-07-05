@@ -5,9 +5,6 @@ package simple
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/stretchr/testify/require"
 	"os"
 	"pvz-cli/internal/app"
 	"pvz-cli/internal/config"
@@ -20,6 +17,10 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
 )
 
 var dbCleanupMu sync.Mutex

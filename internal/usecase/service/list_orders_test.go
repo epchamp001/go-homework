@@ -3,9 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/gojuno/minimock/v3"
-	"github.com/jackc/pgx/v5"
-	"github.com/stretchr/testify/assert"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	repoMock "pvz-cli/internal/usecase/mock"
@@ -13,6 +10,10 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock/v3"
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestServiceImpl_ListOrders(t *testing.T) {

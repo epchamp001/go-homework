@@ -4,9 +4,10 @@ package integration
 
 import (
 	"context"
+	"pvz-cli/internal/domain/vo"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"pvz-cli/internal/domain/vo"
 )
 
 func (s *TestSuite) TestListOrders_ErrEmptyUserID() {

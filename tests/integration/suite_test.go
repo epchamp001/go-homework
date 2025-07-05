@@ -7,10 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/go-testfixtures/testfixtures/v3"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/stretchr/testify/suite"
 	"os"
 	"path/filepath"
 	"pvz-cli/internal/app"
@@ -27,6 +23,11 @@ import (
 	"testing"
 	"text/template"
 	"time"
+
+	"github.com/go-testfixtures/testfixtures/v3"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/suite"
 )
 
 var dbCleanupMu sync.Mutex

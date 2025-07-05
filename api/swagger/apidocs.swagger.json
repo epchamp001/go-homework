@@ -756,5 +756,10 @@
         }
       }
     }
+  },
+  "securityDefinitions": {
+    "basicAuth": {
+      "type": "basic"
+    }
   }
 }

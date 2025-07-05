@@ -89,7 +89,7 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 
 	tx := txmanager.NewTransactor(masterPool, []*pgxpool.Pool{replPool1, replPool2}, log)
 
-	wp := wpool.NewWorkerPool(cfg.Workers.Start, cfg.Workers.Queue)
+	wp := wpool.NewWorkerPool(cfg.Workers.Start, cfg.Workers.Queue, log)
 	c.Add(func(ctx context.Context) error {
 		log.Infow("Stopping worker-pool")
 		wp.Stop()
@@ -118,6 +118,7 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 		log:        log,
 		cfg:        cfg,
 		txMgr:      tx,
+		wp:         wp,
 	}
 
 	s.setupGRPC()
@@ -214,6 +215,10 @@ func (s *Server) runGateway(ctx context.Context) error {
 		return errs.Wrap(err, errs.CodeInternalError, "failed to register PVZ service handler")
 	}
 
+	if err := pvzpb.RegisterAdminServiceHandler(ctx, mux, conn); err != nil {
+		return errs.Wrap(err, errs.CodeInternalError, "register Admin handler")
+	}
+
 	gatewayRouter := s.setupRoutes(mux)
 
 	gwAddr := fmt.Sprintf(":%d", s.cfg.Gateway.Port)
@@ -282,6 +287,8 @@ func (s *Server) setupRoutes(gw http.Handler) *gin.Engine {
 	r.POST("/v1/orders/import", gin.WrapH(corsHandler))
 
 	r.GET("/v1/reports/clients", s.hndl.DownloadClientReport)
+
+	r.POST("/v1/admin/resizePool", gin.WrapH(corsHandler))
 
 	return r
 }

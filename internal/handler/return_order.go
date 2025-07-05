@@ -6,6 +6,7 @@ import (
 	"pvz-cli/internal/handler/mappers"
 	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
+	"pvz-cli/pkg/wpool"
 	"strconv"
 
 	"google.golang.org/grpc/codes"
@@ -23,19 +24,42 @@ func (s *OrderServiceServer) ReturnOrder(
 		return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
 	}
 
-	orderIDStr := strconv.FormatUint(req.OrderId, 10)
-	if err := s.svc.ReturnOrder(ctx, orderIDStr); err != nil {
-		s.log.Errorw("ReturnOrder service error",
-			"order_id", orderIDStr,
-			"error", err,
-		)
-		if grpcErr := errs.GrpcError(err); grpcErr != nil {
-			return nil, grpcErr
+	orderID := strconv.FormatUint(req.OrderId, 10)
+
+	resCh := make(chan wpool.Response, 1)
+
+	s.wp.Submit(wpool.Job{
+		Ctx:    ctx,
+		Result: resCh,
+		Do: func(c context.Context) (any, error) {
+
+			if err := s.svc.ReturnOrder(c, orderID); err != nil {
+				return nil, err
+			}
+
+			return mappers.DomainToProtoOrderResponse(
+				errCodes.CodeOrderReturned,
+				orderID,
+			)
+		},
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, grpcstatus.Error(codes.Canceled, ctx.Err().Error())
+
+	case r := <-resCh:
+		if r.Err != nil {
+			s.log.Errorw("ReturnOrder service error",
+				"order_id", orderID,
+				"error", r.Err,
+			)
+			if grpcErr := errs.GrpcError(r.Err); grpcErr != nil {
+				return nil, grpcErr
+			}
+			return nil, grpcstatus.Error(codes.Internal, errs.ErrorCause(r.Err))
 		}
 
-		cause := errs.ErrorCause(err)
-		return nil, grpcstatus.Error(codes.Internal, cause)
+		return r.Val.(*pvzpb.OrderResponse), nil
 	}
-
-	return mappers.DomainToProtoOrderResponse(errCodes.CodeOrderReturned, orderIDStr)
 }

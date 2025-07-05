@@ -5,6 +5,7 @@ import (
 	"pvz-cli/internal/handler/mappers"
 	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
+	"pvz-cli/pkg/wpool"
 	"strconv"
 
 	"google.golang.org/grpc/codes"
@@ -28,36 +29,61 @@ func (s *OrderServiceServer) ListOrders(
 	}
 	pagination := mappers.ProtoToDomainPagination(req.Pagination)
 	inPVZ := req.InPvz
+	userIDStr := strconv.FormatUint(req.UserId, 10)
 
-	domainOrders, total, err := s.svc.ListOrders(
-		ctx,
-		strconv.FormatUint(req.UserId, 10),
-		inPVZ,
-		lastN,
-		pagination,
-	)
-	if err != nil {
-		s.log.Errorw("ListOrders service error",
-			"user_id", req.UserId,
-			"in_pvz", inPVZ,
-			"lastN", lastN,
-			"error", err,
-		)
-		cause := errs.ErrorCause(err)
-		return nil, grpcstatus.Error(codes.Internal, cause)
-	}
+	resCh := make(chan wpool.Response, 1)
 
-	pbOrders := make([]*pvzpb.Order, 0, len(domainOrders))
-	for _, o := range domainOrders {
-		pbOrder, mapErr := mappers.DomainOrderToProtoOrder(o)
-		if mapErr != nil {
-			return nil, grpcstatus.Error(codes.Internal, mapErr.Error())
+	s.wp.Submit(wpool.Job{
+		Ctx:    ctx,
+		Result: resCh,
+		Do: func(c context.Context) (any, error) {
+
+			domainOrders, total, err := s.svc.ListOrders(
+				c, userIDStr, inPVZ, lastN, pagination,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			pbOrders := make([]*pvzpb.Order, 0, len(domainOrders))
+			for _, o := range domainOrders {
+				pbo, mapErr := mappers.DomainOrderToProtoOrder(o)
+				if mapErr != nil {
+					return nil, mapErr
+				}
+				pbOrders = append(pbOrders, pbo)
+			}
+
+			return struct {
+				orders []*pvzpb.Order
+				total  int
+			}{pbOrders, total}, nil
+		},
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, grpcstatus.Error(codes.Canceled, ctx.Err().Error())
+
+	case r := <-resCh:
+		if r.Err != nil {
+			s.log.Errorw("ListOrders service error",
+				"user_id", req.UserId,
+				"in_pvz", inPVZ,
+				"lastN", lastN,
+				"error", r.Err,
+			)
+			return nil, grpcstatus.Error(codes.Internal, errs.ErrorCause(r.Err))
 		}
-		pbOrders = append(pbOrders, pbOrder)
-	}
 
-	return &pvzpb.OrdersList{
-		Orders: pbOrders,
-		Total:  int32(total),
-	}, nil
+		data := r.Val.(struct {
+			orders []*pvzpb.Order
+			total  int
+		})
+
+		return &pvzpb.OrdersList{
+			Orders: data.orders,
+			Total:  int32(data.total),
+		}, nil
+	}
 }

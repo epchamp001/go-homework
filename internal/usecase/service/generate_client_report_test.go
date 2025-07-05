@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/gojuno/minimock/v3"
-	"github.com/jackc/pgx/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/xuri/excelize/v2"
 	"pvz-cli/internal/domain/models"
 	repoMock "pvz-cli/internal/usecase/mock"
 	txMock "pvz-cli/pkg/txmanager/mock"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock/v3"
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/xuri/excelize/v2"
 )
 
 func TestServiceImpl_generateClientReport(t *testing.T) {

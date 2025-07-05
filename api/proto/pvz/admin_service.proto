@@ -19,7 +19,7 @@ service AdminService {
       summary:     "Resize worker-pool"
       operation_id: "Admin_ResizePool"
       tags: "admin"
-      security: { security_requirement: { key: "basicAuth" } }
+      security: { security_requirement: { key: "basicAuth"; value: {} } }
     };
   }
 }

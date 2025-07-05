@@ -21,6 +21,14 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
       email: "epchamp001@gmail.com"
     }
   }
+  security_definitions: {
+    security: {
+      key: "basicAuth";
+      value: {
+        type: TYPE_BASIC;
+      }
+    }
+  }
   host: "localhost:8080";
   schemes: HTTP;
   consumes: "application/json"
