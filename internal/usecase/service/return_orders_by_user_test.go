@@ -5,7 +5,9 @@ import (
 	"errors"
 	"pvz-cli/internal/domain/models"
 	repoMock "pvz-cli/internal/usecase/mock"
+	"pvz-cli/pkg/logger"
 	txMock "pvz-cli/pkg/txmanager/mock"
+	"pvz-cli/pkg/wpool"
 	"testing"
 	"time"
 
@@ -214,7 +216,13 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:  repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil)
+			log, _ := logger.NewLogger(
+				logger.WithMode("prod"),
+				logger.WithEncoding("console"),
+			)
+			wp := wpool.NewWorkerPool(4, 16, log)
+			defer wp.Stop()
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, wp)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)

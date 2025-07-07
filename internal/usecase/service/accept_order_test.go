@@ -301,7 +301,8 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 				pkgSvc:   pkgMock.NewPackagingStrategyMock(ctrl),
 				strategy: pkgMock.NewProviderMock(ctrl),
 			}
-			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.strategy)
+
+			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.strategy, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(fieldsForTests, tt.args)

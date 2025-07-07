@@ -6,6 +6,7 @@ import (
 	"pvz-cli/internal/usecase"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/pkg/txmanager"
+	"pvz-cli/pkg/wpool"
 	"time"
 
 	"pvz-cli/internal/domain/models"
@@ -48,13 +49,15 @@ type ServiceImpl struct {
 	ordRepo    usecase.OrdersRepository
 	hrRepo     usecase.HistoryAndReturnsRepository
 	strategies packaging.Provider
+	wp         *wpool.Pool
 }
 
-func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository, prov packaging.Provider) *ServiceImpl {
+func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository, prov packaging.Provider, wp *wpool.Pool) *ServiceImpl {
 	return &ServiceImpl{
 		tx:         tx,
 		ordRepo:    ordRepo,
 		hrRepo:     hrRepo,
 		strategies: prov,
+		wp:         wp,
 	}
 }
