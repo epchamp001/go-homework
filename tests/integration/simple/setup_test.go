@@ -13,6 +13,7 @@ import (
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
 	"pvz-cli/pkg/txmanager"
+	"pvz-cli/pkg/wpool"
 	"pvz-cli/tests/integration/testutil"
 	"strconv"
 	"sync"
@@ -78,11 +79,13 @@ func TestMain(m *testing.M) {
 	orderRepo := postgres.NewOrdersPostgresRepo(txmngr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(txmngr)
 	stratProv := packaging.NewDefaultProvider()
-	svc = service.NewService(txmngr, orderRepo, hrRepo, stratProv)
+	wp := wpool.NewWorkerPool(4, 16, log)
+	svc = service.NewService(txmngr, orderRepo, hrRepo, stratProv, wp)
 
 	code := m.Run()
 
 	masterPool.Close()
+	wp.Stop()
 	pgC.Terminate(ctx)
 	os.Exit(code)
 }

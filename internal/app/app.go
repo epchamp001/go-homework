@@ -133,7 +133,7 @@ func (s *Server) setupGRPC() {
 
 	strategyProvider := packaging.NewDefaultProvider()
 
-	svc := service.NewService(s.txMgr, orderRepo, hrRepo, strategyProvider)
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo, strategyProvider, s.wp)
 
 	hndl := handler.NewReportsHandler(svc)
 

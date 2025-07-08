@@ -81,7 +81,7 @@ func TestServiceImpl_ListReturns(t *testing.T) {
 				tx:     txMock.NewTxManagerMock(ctrl),
 				hrRepo: repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 			}
-			service := NewService(f.tx, nil, f.hrRepo, nil)
+			service := NewService(f.tx, nil, f.hrRepo, nil, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
