@@ -5,9 +5,6 @@ package simple
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/stretchr/testify/require"
 	"os"
 	"pvz-cli/internal/app"
 	"pvz-cli/internal/config"
@@ -16,10 +13,15 @@ import (
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
 	"pvz-cli/pkg/txmanager"
+	"pvz-cli/pkg/wpool"
 	"pvz-cli/tests/integration/testutil"
 	"strconv"
 	"sync"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
 )
 
 var dbCleanupMu sync.Mutex
@@ -77,11 +79,13 @@ func TestMain(m *testing.M) {
 	orderRepo := postgres.NewOrdersPostgresRepo(txmngr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(txmngr)
 	stratProv := packaging.NewDefaultProvider()
-	svc = service.NewService(txmngr, orderRepo, hrRepo, stratProv)
+	wp := wpool.NewWorkerPool(4, 16, log)
+	svc = service.NewService(txmngr, orderRepo, hrRepo, stratProv, wp)
 
 	code := m.Run()
 
 	masterPool.Close()
+	wp.Stop()
 	pgC.Terminate(ctx)
 	os.Exit(code)
 }

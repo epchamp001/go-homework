@@ -16,11 +16,14 @@ import (
 	"pvz-cli/internal/repository/storage/postgres"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/auth"
 	"pvz-cli/pkg/closer"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/logger"
 	pvzpb "pvz-cli/pkg/pvz"
 	"pvz-cli/pkg/txmanager"
+	"pvz-cli/pkg/wpool"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -42,6 +45,7 @@ type Server struct {
 	cfg        *config.Config
 	hndl       handler.ReportsHandler
 	txMgr      txmanager.TxManager
+	wp         *wpool.Pool
 }
 
 // NewServer создаёт новое приложение с инициализацией хранилища, бизнес-логики и REPL.
@@ -85,8 +89,26 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 
 	tx := txmanager.NewTransactor(masterPool, []*pgxpool.Pool{replPool1, replPool2}, log)
 
+	wp := wpool.NewWorkerPool(cfg.Workers.Start, cfg.Workers.Queue, log)
+	c.Add(func(ctx context.Context) error {
+		log.Infow("Stopping worker-pool")
+		wp.Stop()
+		return nil
+	})
+
+	creds := auth.StaticCreds{User: cfg.Admin.User, Pass: cfg.Admin.Pass}
+	basic := auth.NewUnaryBasicAuthWithFilter(
+		creds,
+		func(full string) bool { // применяю только к admin-методам
+			return strings.HasPrefix(full, "/admin.AdminService/")
+		},
+	)
+
 	grpcSrv := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.RateLimitInterceptor(limiter)),
+		grpc.ChainUnaryInterceptor(
+			middleware.RateLimitInterceptor(limiter),
+			basic,
+		),
 	)
 	reflection.Register(grpcSrv)
 
@@ -96,6 +118,7 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 		log:        log,
 		cfg:        cfg,
 		txMgr:      tx,
+		wp:         wp,
 	}
 
 	s.setupGRPC()
@@ -104,18 +127,20 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 }
 
 func (s *Server) setupGRPC() {
+
 	orderRepo := postgres.NewOrdersPostgresRepo(s.txMgr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(s.txMgr)
 
 	strategyProvider := packaging.NewDefaultProvider()
 
-	svc := service.NewService(s.txMgr, orderRepo, hrRepo, strategyProvider)
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo, strategyProvider, s.wp)
 
 	hndl := handler.NewReportsHandler(svc)
 
 	s.hndl = hndl
 
-	handler.RegisterOrderService(s.grpcServer, svc, s.log)
+	handler.RegisterOrderService(s.grpcServer, svc, s.log, s.wp)
+	handler.RegisterAdminService(s.grpcServer, s.wp)
 }
 
 // Run запускает REPL-приложение, обрабатывающее пользовательские команды.
@@ -190,6 +215,10 @@ func (s *Server) runGateway(ctx context.Context) error {
 		return errs.Wrap(err, errs.CodeInternalError, "failed to register PVZ service handler")
 	}
 
+	if err := pvzpb.RegisterAdminServiceHandler(ctx, mux, conn); err != nil {
+		return errs.Wrap(err, errs.CodeInternalError, "register Admin handler")
+	}
+
 	gatewayRouter := s.setupRoutes(mux)
 
 	gwAddr := fmt.Sprintf(":%d", s.cfg.Gateway.Port)
@@ -258,6 +287,8 @@ func (s *Server) setupRoutes(gw http.Handler) *gin.Engine {
 	r.POST("/v1/orders/import", gin.WrapH(corsHandler))
 
 	r.GET("/v1/reports/clients", s.hndl.DownloadClientReport)
+
+	r.POST("/v1/admin/resizePool", gin.WrapH(corsHandler))
 
 	return r
 }

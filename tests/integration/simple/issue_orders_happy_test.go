@@ -4,11 +4,12 @@ package simple
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"pvz-cli/internal/domain/models"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIssueOrders_Simple(t *testing.T) {

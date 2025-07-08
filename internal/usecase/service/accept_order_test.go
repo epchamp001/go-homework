@@ -3,15 +3,16 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/gojuno/minimock/v3"
-	"github.com/jackc/pgx/v5"
-	"github.com/stretchr/testify/assert"
 	"pvz-cli/internal/domain/models"
 	repoMock "pvz-cli/internal/usecase/mock"
 	pkgMock "pvz-cli/internal/usecase/packaging/mock"
 	txMock "pvz-cli/pkg/txmanager/mock"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock/v3"
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestServiceImpl_AcceptOrder(t *testing.T) {
@@ -300,7 +301,8 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 				pkgSvc:   pkgMock.NewPackagingStrategyMock(ctrl),
 				strategy: pkgMock.NewProviderMock(ctrl),
 			}
-			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.strategy)
+
+			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.strategy, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(fieldsForTests, tt.args)

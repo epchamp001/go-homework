@@ -1,10 +1,11 @@
 package packaging
 
 import (
-	"github.com/stretchr/testify/assert"
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBagStrategy_Validate(t *testing.T) {

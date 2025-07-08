@@ -53,3 +53,11 @@ storage:
       max_lifetime: 3600
       max_idle_time: 300
       health_check_period: 30
+
+workers:
+  start: 8
+  queue: 128
+
+admin:
+  user: "${ADMIN_USER}"
+  pass: "${ADMIN_PASS}"

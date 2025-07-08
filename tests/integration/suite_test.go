@@ -7,10 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/go-testfixtures/testfixtures/v3"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/stretchr/testify/suite"
 	"os"
 	"path/filepath"
 	"pvz-cli/internal/app"
@@ -20,6 +16,7 @@ import (
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
 	"pvz-cli/pkg/txmanager"
+	"pvz-cli/pkg/wpool"
 	"pvz-cli/tests/integration/testutil"
 	"strconv"
 	"strings"
@@ -27,6 +24,11 @@ import (
 	"testing"
 	"text/template"
 	"time"
+
+	"github.com/go-testfixtures/testfixtures/v3"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/suite"
 )
 
 var dbCleanupMu sync.Mutex
@@ -36,6 +38,7 @@ type TestSuite struct {
 	psqlContainer *testutil.PostgreSQLContainer
 	masterPool    *pgxpool.Pool
 	svc           service.Service
+	wp            *wpool.Pool
 
 	fixtureNow time.Time
 }
@@ -95,7 +98,10 @@ func (s *TestSuite) SetupSuite() {
 
 	strategyProvider := packaging.NewDefaultProvider()
 
-	svc := service.NewService(txmngr, orderRepo, hrRepo, strategyProvider)
+	wp := wpool.NewWorkerPool(4, 16, log)
+	s.wp = wp
+
+	svc := service.NewService(txmngr, orderRepo, hrRepo, strategyProvider, wp)
 	s.svc = svc
 
 	s.fixtureNow = time.Date(2025, 6, 28, 10, 0, 0, 0, time.UTC)
@@ -117,6 +123,8 @@ func (s *TestSuite) TearDownSuite() {
 
 	s.masterPool.Close()
 	s.Require().NoError(s.psqlContainer.Terminate(ctx))
+
+	s.wp.Stop()
 }
 
 func TestSuite_Run(t *testing.T) {

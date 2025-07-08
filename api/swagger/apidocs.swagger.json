@@ -13,6 +13,9 @@
   "tags": [
     {
       "name": "OrdersService"
+    },
+    {
+      "name": "AdminService"
     }
   ],
   "host": "localhost:8080",
@@ -26,6 +29,45 @@
     "application/json"
   ],
   "paths": {
+    "/v1/admin/resizePool": {
+      "post": {
+        "summary": "Resize worker-pool",
+        "operationId": "Admin_ResizePool",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/adminResizeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
     "/v1/orders": {
       "get": {
         "summary": "Получить список заказов клиента",
@@ -299,6 +341,19 @@
     }
   },
   "definitions": {
+    "adminResizeRequest": {
+      "type": "object",
+      "example": {
+        "size": 16
+      },
+      "properties": {
+        "size": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Новое количество воркеров (1 … 100)"
+        }
+      }
+    },
     "ordersAcceptOrderRequest": {
       "type": "object",
       "example": {
@@ -700,6 +755,11 @@
           }
         }
       }
+    }
+  },
+  "securityDefinitions": {
+    "basicAuth": {
+      "type": "basic"
     }
   }
 }

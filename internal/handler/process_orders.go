@@ -5,6 +5,7 @@ import (
 	"pvz-cli/internal/handler/mappers"
 	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
+	"pvz-cli/pkg/wpool"
 	"strconv"
 
 	"google.golang.org/grpc/codes"
@@ -22,39 +23,61 @@ func (s *OrderServiceServer) ProcessOrders(
 		return nil, grpcstatus.Error(codes.InvalidArgument, err.Error())
 	}
 
-	userIDStr := strconv.FormatUint(req.UserId, 10)
+	userID := strconv.FormatUint(req.UserId, 10)
+
 	ids := make([]string, 0, len(req.OrderIds))
 	for _, id := range req.OrderIds {
 		ids = append(ids, strconv.FormatUint(id, 10))
 	}
 
-	var (
-		result map[string]error
-		err    error
-	)
-
-	switch req.Action {
-	case pvzpb.ActionType_ACTION_TYPE_ISSUE:
-		result, err = s.svc.IssueOrders(ctx, userIDStr, ids)
-	case pvzpb.ActionType_ACTION_TYPE_RETURN:
-		result, err = s.svc.ReturnOrdersByClient(ctx, userIDStr, ids)
-	default:
+	if req.Action != pvzpb.ActionType_ACTION_TYPE_ISSUE &&
+		req.Action != pvzpb.ActionType_ACTION_TYPE_RETURN {
 		return nil, grpcstatus.Error(codes.InvalidArgument, "unknown action")
 	}
 
-	if err != nil {
-		s.log.Errorw("ProcessOrders service error",
-			"action", req.Action,
-			"user_id", userIDStr,
-			"error", err,
-		)
-		cause := errs.ErrorCause(err)
-		return nil, grpcstatus.Error(codes.Internal, cause)
-	}
+	resCh := make(chan wpool.Response, 1)
 
-	protoResult, mapErr := mappers.DomainProcessResultToProtoProcessResult(result)
-	if mapErr != nil {
-		return nil, grpcstatus.Error(codes.Internal, mapErr.Error())
+	s.wp.Submit(wpool.Job{
+		Ctx:    ctx,
+		Result: resCh,
+		Do: func(c context.Context) (any, error) {
+
+			var (
+				res map[string]error
+				err error
+			)
+
+			switch req.Action {
+			case pvzpb.ActionType_ACTION_TYPE_ISSUE:
+				res, err = s.svc.IssueOrders(c, userID, ids)
+			case pvzpb.ActionType_ACTION_TYPE_RETURN:
+				res, err = s.svc.ReturnOrdersByClient(c, userID, ids)
+			}
+			if err != nil {
+				return nil, err
+			}
+
+			return mappers.DomainProcessResultToProtoProcessResult(res)
+		},
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, grpcstatus.Error(codes.Canceled, ctx.Err().Error())
+
+	case r := <-resCh:
+		if r.Err != nil {
+			s.log.Errorw("ProcessOrders service error",
+				"action", req.Action,
+				"user_id", userID,
+				"error", r.Err,
+			)
+			if grpcErr := errs.GrpcError(r.Err); grpcErr != nil {
+				return nil, grpcErr
+			}
+			return nil, grpcstatus.Error(codes.Internal, errs.ErrorCause(r.Err))
+		}
+
+		return r.Val.(*pvzpb.ProcessResult), nil
 	}
-	return protoResult, nil
 }

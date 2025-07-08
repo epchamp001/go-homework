@@ -5,6 +5,7 @@ import (
 	"pvz-cli/internal/handler/mappers"
 	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
+	"pvz-cli/pkg/wpool"
 
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -22,29 +23,48 @@ func (s *OrderServiceServer) ListReturns(
 
 	pagination := mappers.ProtoToDomainPagination(req.Pagination)
 
-	returnRecords, err := s.svc.ListReturns(ctx, pagination)
-	if err != nil {
-		s.log.Errorw("ListReturns service error",
-			"pagination", req.GetPagination(),
-			"error", err,
-		)
-		if grpcErr := errs.GrpcError(err); grpcErr != nil {
-			return nil, grpcErr
-		}
-		cause := errs.ErrorCause(err)
-		return nil, grpcstatus.Error(codes.Internal, cause)
-	}
+	resCh := make(chan wpool.Response, 1)
 
-	pbReturns := make([]*pvzpb.ReturnRecord, 0, len(returnRecords))
-	for _, r := range returnRecords {
-		pbR, mapErr := mappers.DomainReturnRecordToProtoReturnRecord(r)
-		if mapErr != nil {
-			return nil, grpcstatus.Error(codes.Internal, mapErr.Error())
-		}
-		pbReturns = append(pbReturns, pbR)
-	}
+	s.wp.Submit(wpool.Job{
+		Ctx:    ctx,
+		Result: resCh,
+		Do: func(c context.Context) (any, error) {
 
-	return &pvzpb.ReturnsList{
-		Returns: pbReturns,
-	}, nil
+			returnRecords, err := s.svc.ListReturns(c, pagination)
+			if err != nil {
+				return nil, err
+			}
+
+			pbReturns := make([]*pvzpb.ReturnRecord, 0, len(returnRecords))
+			for _, r := range returnRecords {
+				pbr, mapErr := mappers.DomainReturnRecordToProtoReturnRecord(r)
+				if mapErr != nil {
+					return nil, mapErr
+				}
+				pbReturns = append(pbReturns, pbr)
+			}
+			return pbReturns, nil
+		},
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, grpcstatus.Error(codes.Canceled, ctx.Err().Error())
+
+	case r := <-resCh:
+		if r.Err != nil {
+			s.log.Errorw("ListReturns service error",
+				"pagination", req.GetPagination(),
+				"error", r.Err,
+			)
+			if grpcErr := errs.GrpcError(r.Err); grpcErr != nil {
+				return nil, grpcErr
+			}
+			return nil, grpcstatus.Error(codes.Internal, errs.ErrorCause(r.Err))
+		}
+
+		return &pvzpb.ReturnsList{
+			Returns: r.Val.([]*pvzpb.ReturnRecord),
+		}, nil
+	}
 }

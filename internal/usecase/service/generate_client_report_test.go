@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/gojuno/minimock/v3"
-	"github.com/jackc/pgx/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/xuri/excelize/v2"
 	"pvz-cli/internal/domain/models"
 	repoMock "pvz-cli/internal/usecase/mock"
 	txMock "pvz-cli/pkg/txmanager/mock"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock/v3"
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/xuri/excelize/v2"
 )
 
 func TestServiceImpl_generateClientReport(t *testing.T) {
@@ -103,7 +104,8 @@ func TestServiceImpl_generateClientReport(t *testing.T) {
 				tx:      txMock.NewTxManagerMock(ctrl),
 				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, nil, nil)
+
+			service := NewService(f.tx, f.ordRepo, nil, nil, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(f)
@@ -174,7 +176,7 @@ func TestServiceImpl_GenerateClientReportByte(t *testing.T) {
 		return orders, nil
 	})
 
-	service := NewService(tx, ordRepo, nil, nil)
+	service := NewService(tx, ordRepo, nil, nil, nil)
 
 	data, err := service.GenerateClientReportByte(ctx, "orders")
 	assert.NoError(t, err)

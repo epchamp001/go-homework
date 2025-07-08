@@ -5,11 +5,12 @@ package integration
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/usecase/packaging"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (

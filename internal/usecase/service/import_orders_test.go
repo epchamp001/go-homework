@@ -3,14 +3,15 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/gojuno/minimock/v3"
-	"github.com/jackc/pgx/v5"
-	"github.com/stretchr/testify/assert"
 	"pvz-cli/internal/domain/models"
 	repoMock "pvz-cli/internal/usecase/mock"
 	txMock "pvz-cli/pkg/txmanager/mock"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock/v3"
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestServiceImpl_ImportOrders(t *testing.T) {
@@ -139,7 +140,7 @@ func TestServiceImpl_ImportOrders(t *testing.T) {
 				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:  repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
