@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 
@@ -24,6 +25,8 @@ type Config struct {
 	Storage    strgCfg.StorageConfig
 	Workers    WorkersConfig `mapstructure:"workers"`
 	Admin      AdminConfig   `mapstructure:"admin"`
+	Kafka      KafkaConfig   `mapstructure:"kafka"`
+	Outbox     OutboxConfig  `mapstructure:"outbox"`
 }
 
 // LoadConfig загружает и распаковывает конфигурацию по указанному пути.
@@ -83,6 +86,16 @@ func LoadConfig(configPath, envPath string) (*Config, error) {
 			errs.CodeInvalidConfiguration,
 			"cannot unmarshal config into struct",
 		)
+	}
+
+	if cfg.Kafka.Topic == "" {
+		return nil, errs.New(errs.CodeInvalidConfiguration, "kafka.topic must be set")
+	}
+	if cfg.Outbox.BatchSize <= 0 {
+		cfg.Outbox.BatchSize = 100
+	}
+	if cfg.Outbox.Interval == 0 {
+		cfg.Outbox.Interval = time.Second
 	}
 
 	if h := os.Getenv("PG_HOST"); h != "" {

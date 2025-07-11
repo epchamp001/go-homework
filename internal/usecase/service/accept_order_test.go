@@ -20,11 +20,12 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 	ctx := context.Background()
 
 	type fields struct {
-		tx       *txMock.TxManagerMock
-		ordRepo  *repoMock.OrdersRepositoryMock
-		hrRepo   *repoMock.HistoryAndReturnsRepositoryMock
-		pkgSvc   *pkgMock.PackagingStrategyMock
-		strategy *pkgMock.ProviderMock
+		tx         *txMock.TxManagerMock
+		ordRepo    *repoMock.OrdersRepositoryMock
+		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
+		outboxRepo *repoMock.OutboxRepositoryMock
+		pkgSvc     *pkgMock.PackagingStrategyMock
+		strategy   *pkgMock.ProviderMock
 	}
 
 	type args struct {
@@ -77,6 +78,13 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 
 				f.hrRepo.AddHistoryMock.
 					Set(func(_ context.Context, _ *models.HistoryEvent) error {
+						return nil
+					})
+
+				f.outboxRepo.AddMock.
+					Set(func(_ context.Context, evt *models.OrderEvent) error {
+						assert.Equal(t, models.OrderAccepted, evt.EventType)
+						assert.Equal(t, a.orderID, evt.Order.ID)
 						return nil
 					})
 			}, args: args{
@@ -295,14 +303,15 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 
 			ctrl := minimock.NewController(t)
 			fieldsForTests := &fields{
-				tx:       txMock.NewTxManagerMock(ctrl),
-				ordRepo:  repoMock.NewOrdersRepositoryMock(ctrl),
-				hrRepo:   repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
-				pkgSvc:   pkgMock.NewPackagingStrategyMock(ctrl),
-				strategy: pkgMock.NewProviderMock(ctrl),
+				tx:         txMock.NewTxManagerMock(ctrl),
+				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
+				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
+				pkgSvc:     pkgMock.NewPackagingStrategyMock(ctrl),
+				strategy:   pkgMock.NewProviderMock(ctrl),
 			}
 
-			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.strategy, nil)
+			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.outboxRepo, fieldsForTests.strategy, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(fieldsForTests, tt.args)

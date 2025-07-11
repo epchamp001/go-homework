@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math/rand"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
@@ -84,6 +85,25 @@ func (s *ServiceImpl) ReturnOrdersByClient(ctx context.Context, userID string, i
 								err, errs.CodeDatabaseError,
 								"failed to add history event", "order_id", oid,
 							)
+							return nil
+						}
+
+						randomClientID := rand.Int63n(1_000_000_000) + 1
+						kafkaEvt, err := models.NewOrderEvent(
+							models.OrderReturnedByClient,
+							o.ID,
+							"returned_by_client",
+							o.UserID,
+							models.Actor{Type: models.ActorClient, ID: randomClientID},
+						)
+						if err != nil {
+							bisErr = errs.Wrap(err, errs.CodeInternalError,
+								"failed to build client-return event", "order_id", oid)
+							return nil
+						}
+						if err := s.outboxRepo.Add(txCtx, kafkaEvt); err != nil {
+							bisErr = errs.Wrap(err, errs.CodeDatabaseError,
+								"failed to enqueue return-by-client event", "order_id", oid)
 							return nil
 						}
 

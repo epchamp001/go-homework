@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"math/rand"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
+	"strings"
 	"time"
 )
 
@@ -66,6 +68,25 @@ func (s *ServiceImpl) IssueOrders(ctx context.Context, userID string, ids []stri
 						if err := s.hrRepo.AddHistory(txCtx, evt); err != nil {
 							bisErr = errs.Wrap(err, errs.CodeDatabaseError,
 								"failed to add history", "order_id", oid)
+							return nil
+						}
+
+						randomCourierID := rand.Int63n(1_000_000_000) + 1
+						kafkaEvt, err := models.NewOrderEvent(
+							models.OrderIssued,
+							o.ID,
+							strings.ToLower(string(o.Status)),
+							o.UserID,
+							models.Actor{Type: models.ActorCourier, ID: randomCourierID},
+						)
+						if err != nil {
+							bisErr = errs.Wrap(err, errs.CodeInternalError,
+								"failed to build order event", "order_id", oid)
+							return nil
+						}
+						if err := s.outboxRepo.Add(txCtx, kafkaEvt); err != nil {
+							bisErr = errs.Wrap(err, errs.CodeDatabaseError,
+								"failed to enqueue order event", "order_id", oid)
 							return nil
 						}
 

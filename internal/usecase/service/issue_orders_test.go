@@ -21,9 +21,10 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 	ctx := context.Background()
 
 	type fields struct {
-		tx      *txMock.TxManagerMock
-		ordRepo *repoMock.OrdersRepositoryMock
-		hrRepo  *repoMock.HistoryAndReturnsRepositoryMock
+		tx         *txMock.TxManagerMock
+		ordRepo    *repoMock.OrdersRepositoryMock
+		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
+		outboxRepo *repoMock.OutboxRepositoryMock
 	}
 	type args struct {
 		ctx    context.Context
@@ -218,6 +219,12 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 					assert.WithinDuration(t, now, evt.Time, time.Second)
 					return nil
 				})
+
+				f.outboxRepo.AddMock.Set(func(_ context.Context, evt *models.OrderEvent) error {
+					assert.Equal(t, models.OrderIssued, evt.EventType)
+					assert.Contains(t, a.ids, evt.Order.ID)
+					return nil
+				})
 			},
 			args:    args{ctx: ctx, userID: "user1", ids: []string{"7", "8"}},
 			wantErr: assert.NoError,
@@ -235,9 +242,10 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 
 			ctrl := minimock.NewController(t)
 			f := &fields{
-				tx:      txMock.NewTxManagerMock(ctrl),
-				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
-				hrRepo:  repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				tx:         txMock.NewTxManagerMock(ctrl),
+				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
+				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
 			}
 			log, _ := logger.NewLogger(
 				logger.WithMode("prod"),
@@ -246,7 +254,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 			wp := wpool.NewWorkerPool(4, 16, log)
 			defer wp.Stop()
 
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, wp)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)

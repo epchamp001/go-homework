@@ -59,3 +59,12 @@ workers:
 admin:
   user: "${ADMIN_USER}"
   pass: "${ADMIN_PASS}"
+
+kafka:
+  brokers:
+    - "localhost:9092"
+  topic: "pvz.events-log"
+
+outbox:
+  batch_size: 100
+  interval: "1s"
