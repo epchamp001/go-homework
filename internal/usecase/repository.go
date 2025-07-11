@@ -2,10 +2,11 @@ package usecase
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type OrdersRepository interface {

@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/stretchr/testify/require"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"pvz-cli/internal/infrastructure/kafka/codec"
 	"pvz-cli/internal/infrastructure/kafka/consumer"
 	"pvz-cli/internal/infrastructure/kafka/producer"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 func (s *TestSuite) TestKafkaProducerConsumer_WithWrappers() {

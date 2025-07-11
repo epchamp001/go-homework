@@ -291,6 +291,10 @@ wait-db:
 start-app: docker-up wait-db up
 	go run ./cmd/pvz/main.go ./cmd/pvz/setup_flag.go --config ./configs/config.yaml --env .env
 
+notifier:
+	go run ./internal/services/notifier/cmd/notifier/main.go
+
+
 # Пример команды:
 # make mocks INTERFACE=./internal/usecase.OrdersRepository OUT=./internal/usecase/mock/orders_repo_mock.go MOCK_NAME=OrdersRepositoryMock
 mocks:

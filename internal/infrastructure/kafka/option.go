@@ -1,8 +1,9 @@
 package kafka
 
 import (
-	"github.com/twmb/franz-go/pkg/kgo"
 	"io"
+
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type ClientOption func([]kgo.Opt) []kgo.Opt

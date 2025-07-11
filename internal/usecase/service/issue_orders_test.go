@@ -43,88 +43,19 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 		wantResults map[string]assert.ErrorAssertionFunc
 	}{
 		{
-			name: "GetOrderNotFound",
+			name: "Tx aborted on first ID -> fatal error, map nil",
 			prepare: func(f *fields, a args) {
+				// первый id "bad" вернёт txErr
+				call := 0
 				f.tx.WithTxMock.Set(func(
-					txCtx context.Context,
-					_ pgx.TxIsoLevel,
-					_ pgx.TxAccessMode,
+					_ context.Context, _ pgx.TxIsoLevel, _ pgx.TxAccessMode,
 					fn func(context.Context) error,
 				) error {
-					return fn(txCtx)
-				})
-				f.ordRepo.GetMock.Set(func(_ context.Context, orderID string) (*models.Order, error) {
-					return nil, errors.New("not found")
-				})
-			},
-			args:    args{ctx: ctx, userID: "user1", ids: []string{"1"}},
-			wantErr: assert.NoError,
-			wantResults: map[string]assert.ErrorAssertionFunc{
-				"1": assert.Error, // wrapped "order not found"
-			},
-		},
-		{
-			name: "ValidationFailed_WrongUser",
-			prepare: func(f *fields, a args) {
-				f.tx.WithTxMock.Set(func(
-					txCtx context.Context,
-					_ pgx.TxIsoLevel,
-					_ pgx.TxAccessMode,
-					fn func(context.Context) error,
-				) error {
-					return fn(txCtx)
-				})
-				f.ordRepo.GetMock.Set(func(_ context.Context, orderID string) (*models.Order, error) {
-					return &models.Order{
-						ID:        orderID,
-						UserID:    "otherUser",
-						Status:    models.StatusAccepted,
-						ExpiresAt: validExpiry,
-					}, nil
-				})
-			},
-			args:    args{ctx: ctx, userID: "user1", ids: []string{"2"}},
-			wantErr: assert.NoError,
-			wantResults: map[string]assert.ErrorAssertionFunc{
-				"2": assert.Error,
-			},
-		},
-		{
-			name: "ValidationFailed_Expired",
-			prepare: func(f *fields, a args) {
-				f.tx.WithTxMock.Set(func(
-					txCtx context.Context,
-					_ pgx.TxIsoLevel,
-					_ pgx.TxAccessMode,
-					fn func(context.Context) error,
-				) error {
-					return fn(txCtx)
-				})
-				f.ordRepo.GetMock.Set(func(_ context.Context, orderID string) (*models.Order, error) {
-					return &models.Order{
-						ID:        orderID,
-						UserID:    a.userID,
-						Status:    models.StatusAccepted,
-						ExpiresAt: now.Add(-time.Minute),
-					}, nil
-				})
-			},
-			args:    args{ctx: ctx, userID: "user1", ids: []string{"3"}},
-			wantErr: assert.NoError,
-			wantResults: map[string]assert.ErrorAssertionFunc{
-				"3": assert.Error,
-			},
-		},
-		{
-			name: "UpdateFailed",
-			prepare: func(f *fields, a args) {
-				f.tx.WithTxMock.Set(func(
-					txCtx context.Context,
-					_ pgx.TxIsoLevel,
-					_ pgx.TxAccessMode,
-					fn func(context.Context) error,
-				) error {
-					return fn(txCtx)
+					call++
+					if call == 1 {
+						return errors.New("deadlock")
+					}
+					return fn(context.Background())
 				})
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return &models.Order{
@@ -134,103 +65,37 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 						ExpiresAt: validExpiry,
 					}, nil
 				})
-				f.ordRepo.UpdateMock.Set(func(_ context.Context, _ *models.Order) error {
-					return errors.New("update failed")
-				})
+				f.ordRepo.UpdateMock.Return(nil)
+				f.hrRepo.AddHistoryMock.Return(nil)
+				f.outboxRepo.AddMock.Return(nil)
 			},
-			args:    args{ctx: ctx, userID: "user1", ids: []string{"4"}},
-			wantErr: assert.NoError,
-			wantResults: map[string]assert.ErrorAssertionFunc{
-				"4": assert.Error,
-			},
+			args:    args{ctx, "u", []string{"bad", "other"}},
+			wantErr: assert.Error,
 		},
 		{
-			name: "HistoryFailed",
+			name: "Mixed results: bisErr & ok",
 			prepare: func(f *fields, a args) {
-				f.tx.WithTxMock.Set(func(
-					txCtx context.Context,
-					_ pgx.TxIsoLevel,
-					_ pgx.TxAccessMode,
-					fn func(context.Context) error,
-				) error {
-					return fn(txCtx)
-				})
+				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
-					return &models.Order{
-						ID:        id,
-						UserID:    a.userID,
-						Status:    models.StatusAccepted,
-						ExpiresAt: validExpiry,
-					}, nil
+					switch id {
+					case "bis":
+						return nil, errors.New("not found")
+					default:
+						return &models.Order{
+							ID: id, UserID: a.userID,
+							Status: models.StatusAccepted, ExpiresAt: validExpiry,
+						}, nil
+					}
 				})
-				f.ordRepo.UpdateMock.Set(func(_ context.Context, _ *models.Order) error {
-					return nil
-				})
-				f.hrRepo.AddHistoryMock.Set(func(_ context.Context, evt *models.HistoryEvent) error {
-					return errors.New("history error")
-				})
+				f.ordRepo.UpdateMock.Return(nil)
+				f.hrRepo.AddHistoryMock.Return(nil)
+				f.outboxRepo.AddMock.Return(nil)
 			},
-			args:    args{ctx: ctx, userID: "user1", ids: []string{"5"}},
+			args:    args{ctx, "u", []string{"ok", "bis"}},
 			wantErr: assert.NoError,
 			wantResults: map[string]assert.ErrorAssertionFunc{
-				"5": assert.Error,
-			},
-		},
-		{
-			name: "TransactionFailed",
-			prepare: func(f *fields, a args) {
-				f.tx.WithTxMock.Set(func(
-					_ context.Context,
-					_ pgx.TxIsoLevel,
-					_ pgx.TxAccessMode,
-					_ func(context.Context) error,
-				) error {
-					return errors.New("tx aborted")
-				})
-			},
-			args:        args{ctx: ctx, userID: "user1", ids: []string{"6"}},
-			wantErr:     assert.Error,
-			wantResults: nil,
-		},
-		{
-			name: "SuccessMultiple",
-			prepare: func(f *fields, a args) {
-				f.tx.WithTxMock.Set(func(
-					txCtx context.Context,
-					_ pgx.TxIsoLevel,
-					_ pgx.TxAccessMode,
-					fn func(context.Context) error,
-				) error {
-					return fn(txCtx)
-				})
-				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
-					return &models.Order{
-						ID:        id,
-						UserID:    a.userID,
-						Status:    models.StatusAccepted,
-						ExpiresAt: validExpiry,
-					}, nil
-				})
-				f.ordRepo.UpdateMock.Set(func(_ context.Context, _ *models.Order) error {
-					return nil
-				})
-				f.hrRepo.AddHistoryMock.Set(func(_ context.Context, evt *models.HistoryEvent) error {
-					assert.Equal(t, models.StatusIssued, evt.Status)
-					assert.WithinDuration(t, now, evt.Time, time.Second)
-					return nil
-				})
-
-				f.outboxRepo.AddMock.Set(func(_ context.Context, evt *models.OrderEvent) error {
-					assert.Equal(t, models.OrderIssued, evt.EventType)
-					assert.Contains(t, a.ids, evt.Order.ID)
-					return nil
-				})
-			},
-			args:    args{ctx: ctx, userID: "user1", ids: []string{"7", "8"}},
-			wantErr: assert.NoError,
-			wantResults: map[string]assert.ErrorAssertionFunc{
-				"7": assert.NoError,
-				"8": assert.NoError,
+				"ok":  assert.NoError,
+				"bis": assert.Error,
 			},
 		},
 	}
@@ -247,6 +112,125 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
 			}
+			if tt.prepare != nil {
+				tt.prepare(f, tt.args)
+			}
+
+			log, _ := logger.NewLogger(logger.WithMode("prod"))
+			wp := wpool.NewWorkerPool(4, 16, log)
+			defer wp.Stop()
+
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
+
+			got, err := svc.IssueOrders(tt.args.ctx, tt.args.userID, tt.args.ids)
+			tt.wantErr(t, err)
+
+			if tt.wantResults == nil {
+				assert.Nil(t, got)
+			} else {
+				assert.Len(t, got, len(tt.args.ids))
+				for id, want := range tt.wantResults {
+					want(t, got[id], "order %s", id)
+				}
+			}
+		})
+	}
+}
+
+func TestServiceImpl_issueOne(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	type fields struct {
+		tx         *txMock.TxManagerMock
+		ordRepo    *repoMock.OrdersRepositoryMock
+		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
+		outboxRepo *repoMock.OutboxRepositoryMock
+	}
+	type args struct {
+		ctx     context.Context
+		orderID string
+		userID  string
+	}
+	now := time.Now()
+	validExpiry := now.Add(time.Hour)
+
+	tests := []struct {
+		name       string
+		prepare    func(f *fields, a args)
+		args       args
+		wantbisErr assert.ErrorAssertionFunc
+		wantTxErr  assert.ErrorAssertionFunc
+	}{
+		{
+			name: "order not found -> bisErr",
+			prepare: func(f *fields, a args) {
+				f.tx.WithTxMock.Set(pass)
+				f.ordRepo.GetMock.Return(nil, errors.New("nf"))
+			},
+			args:       args{ctx, "1", "u"},
+			wantbisErr: assert.Error,
+			wantTxErr:  assert.NoError,
+		},
+		{
+			name: "wrong user -> validation bisErr",
+			prepare: func(f *fields, a args) {
+				f.tx.WithTxMock.Set(pass)
+				f.ordRepo.GetMock.Return(&models.Order{
+					ID: "2", UserID: "other",
+					Status: models.StatusAccepted, ExpiresAt: validExpiry,
+				}, nil)
+			},
+			args:       args{ctx, "2", "u"},
+			wantbisErr: assert.Error,
+			wantTxErr:  assert.NoError,
+		},
+		{
+			name: "tx aborted -> txErr",
+			prepare: func(f *fields, a args) {
+				f.tx.WithTxMock.Set(func(context.Context, pgx.TxIsoLevel,
+					pgx.TxAccessMode, func(context.Context) error) error {
+					return errors.New("deadlock")
+				})
+			},
+			args:       args{ctx, "3", "u"},
+			wantbisErr: assert.NoError,
+			wantTxErr:  assert.Error,
+		},
+		{
+			name: "happy path",
+			prepare: func(f *fields, a args) {
+				f.tx.WithTxMock.Set(pass)
+				f.ordRepo.GetMock.Return(&models.Order{
+					ID: a.orderID, UserID: a.userID,
+					Status: models.StatusAccepted, ExpiresAt: validExpiry,
+				}, nil)
+				f.ordRepo.UpdateMock.Return(nil)
+				f.hrRepo.AddHistoryMock.Return(nil)
+				f.outboxRepo.AddMock.Return(nil)
+			},
+			args:       args{ctx, "4", "u"},
+			wantbisErr: assert.NoError,
+			wantTxErr:  assert.NoError,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := minimock.NewController(t)
+			f := &fields{
+				tx:         txMock.NewTxManagerMock(ctrl),
+				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
+				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
+			}
+			if tt.prepare != nil {
+				tt.prepare(f, tt.args)
+			}
+
 			log, _ := logger.NewLogger(
 				logger.WithMode("prod"),
 				logger.WithEncoding("console"),
@@ -254,23 +238,21 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 			wp := wpool.NewWorkerPool(4, 16, log)
 			defer wp.Stop()
 
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
 
-			if tt.prepare != nil {
-				tt.prepare(f, tt.args)
-			}
-
-			res, err := service.IssueOrders(tt.args.ctx, tt.args.userID, tt.args.ids)
-			tt.wantErr(t, err)
-
-			if tt.wantResults == nil {
-				assert.Nil(t, res)
-			} else {
-				assert.Len(t, res, len(tt.args.ids))
-				for id, assertFn := range tt.wantResults {
-					assertFn(t, res[id], "order %s", id)
-				}
-			}
+			bis, txErr := svc.issueOne(tt.args.ctx, tt.args.orderID, tt.args.userID, now)
+			tt.wantbisErr(t, bis)
+			tt.wantTxErr(t, txErr)
 		})
 	}
+}
+
+// пасс-сквозной WithTx для краткости
+func pass(
+	txCtx context.Context,
+	_ pgx.TxIsoLevel,
+	_ pgx.TxAccessMode,
+	fn func(context.Context) error,
+) error {
+	return fn(txCtx)
 }

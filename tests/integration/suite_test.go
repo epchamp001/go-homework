@@ -7,10 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/kafka"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"net"
 	"os"
 	"path/filepath"
@@ -31,6 +27,11 @@ import (
 	"testing"
 	"text/template"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/jackc/pgx/v5/pgtype"

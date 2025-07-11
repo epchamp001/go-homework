@@ -3,18 +3,19 @@ package outboxworker
 import (
 	"context"
 	"errors"
-	"github.com/gojuno/minimock/v3"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zapcore"
 	"pvz-cli/internal/domain/models"
 	repoMock "pvz-cli/internal/usecase/mock"
 	"pvz-cli/pkg/logger"
 	txMock "pvz-cli/pkg/txmanager/mock"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock/v3"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestWorker_ProcessOnce(t *testing.T) {

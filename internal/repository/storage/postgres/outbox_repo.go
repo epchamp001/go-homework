@@ -3,11 +3,12 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"github.com/google/uuid"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type OutboxPostgresRepo struct {

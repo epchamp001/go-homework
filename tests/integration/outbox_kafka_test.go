@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/stretchr/testify/require"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/infrastructure/kafka/consumer"
 	"pvz-cli/internal/infrastructure/kafka/producer"
 	"pvz-cli/internal/repository/storage/postgres"
 	"pvz-cli/internal/usecase/outboxworker"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 func (s *TestSuite) TestOutboxWorkerPublishesToKafka_WithWrappers() {

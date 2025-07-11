@@ -2,7 +2,6 @@ package outboxworker
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/infrastructure/kafka/codec"
 	"pvz-cli/internal/infrastructure/kafka/producer"
@@ -10,6 +9,8 @@ import (
 	"pvz-cli/pkg/logger"
 	"pvz-cli/pkg/txmanager"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Worker struct {

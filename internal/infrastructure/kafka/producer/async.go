@@ -3,8 +3,9 @@ package producer
 import (
 	"context"
 
-	"github.com/twmb/franz-go/pkg/kgo"
 	"pvz-cli/internal/infrastructure/kafka"
+
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type AsyncProducer struct {

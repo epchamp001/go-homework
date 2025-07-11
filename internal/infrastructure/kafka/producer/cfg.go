@@ -2,8 +2,9 @@ package producer
 
 import (
 	"fmt"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"time"
+
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type Config struct {

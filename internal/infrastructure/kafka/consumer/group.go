@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/twmb/franz-go/pkg/kgo"
 	"pvz-cli/internal/infrastructure/kafka"
+
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 // GroupHandler задаёт колбэки пользовательской обработки.

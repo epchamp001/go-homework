@@ -2,8 +2,9 @@ package consumer
 
 import (
 	"fmt"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"time"
+
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 // Config описывает минимальный набор параметров для консьюмера (как одиночного, так и в составе consumer-group).
