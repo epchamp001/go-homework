@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>🚚 PVZ Notifier</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>🚚 PVZ Events <small>(auto-refresh 3 s)</small></h1>
+</header>
+
+<ul id="feed"></ul>
+
+<script>
+    const feed   = document.getElementById('feed');
+    const emoji  = {
+        order_accepted           : "✅",
+        order_returned_to_courier: "↩️",
+        order_issued             : "🎉",
+        order_returned_by_client : "🙁"
+    };
+
+    function card(ev){
+        const e = ev.raw;
+        const li = document.createElement('li');
+        li.className = e.order.status;
+
+        li.innerHTML = `
+    <div class="head">
+      <span class="emoji">${emoji[e.event_type]||"❔"}</span>
+      <span class="etype">${e.event_type.replaceAll('_',' ')}</span>
+      <time>${ev.time}</time>
+    </div>
+
+    <div class="info">
+      <div><b>Order&nbsp;ID:</b> ${e.order.id}</div>
+      <div><b>User&nbsp;ID:</b> ${e.order.user_id}</div>
+      <div><b>Status&nbsp;:</b> ${e.order.status}</div>
+      <div><b>Actor&nbsp; :</b> ${e.actor.type} #${e.actor.id}</div>
+    </div>
+
+    <details>
+      <summary>raw JSON</summary>
+      <pre>${JSON.stringify(e,null,2)}</pre>
+    </details>`;
+        return li;
+    }
+
+    async function refresh(){
+        try{
+            const r   = await fetch('/events?_=' + Date.now());
+            const arr = await r.json();
+            feed.innerHTML = '';
+            arr.slice().reverse().forEach(ev => feed.appendChild(card(ev)));
+        }catch(e){ console.error(e); }
+    }
+
+    refresh();
+    setInterval(refresh, 3000);
+</script>
+</body>
+</html>

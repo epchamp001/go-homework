@@ -19,9 +19,10 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 	ctx := context.Background()
 
 	type fields struct {
-		tx      *txMock.TxManagerMock
-		ordRepo *repoMock.OrdersRepositoryMock
-		hrRepo  *repoMock.HistoryAndReturnsRepositoryMock
+		tx         *txMock.TxManagerMock
+		ordRepo    *repoMock.OrdersRepositoryMock
+		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
+		outboxRepo *repoMock.OutboxRepositoryMock
 	}
 	type args struct {
 		ctx     context.Context
@@ -223,6 +224,12 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 					assert.NotNil(t, o.ReturnedAt)
 					return nil
 				})
+
+				f.outboxRepo.AddMock.Set(func(_ context.Context, evt *models.OrderEvent) error {
+					assert.Equal(t, "returned_to_courier", evt.Order.Status)
+					assert.Equal(t, "7", evt.Order.ID)
+					return nil
+				})
 			},
 			args:    args{ctx: ctx, orderID: "7"},
 			wantErr: assert.NoError,
@@ -236,11 +243,12 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 
 			ctrl := minimock.NewController(t)
 			f := &fields{
-				tx:      txMock.NewTxManagerMock(ctrl),
-				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
-				hrRepo:  repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				tx:         txMock.NewTxManagerMock(ctrl),
+				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
+				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)

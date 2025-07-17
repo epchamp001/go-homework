@@ -13,7 +13,9 @@ import (
 	"pvz-cli/internal/config"
 	"pvz-cli/internal/handler"
 	"pvz-cli/internal/handler/middleware"
+	"pvz-cli/internal/infrastructure/kafka/producer"
 	"pvz-cli/internal/repository/storage/postgres"
+	"pvz-cli/internal/usecase/outboxworker"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
 	"pvz-cli/pkg/auth"
@@ -123,6 +125,43 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 
 	s.setupGRPC()
 
+	prodCfg := producer.Config{
+		Brokers:      s.cfg.Kafka.Brokers,
+		Topic:        s.cfg.Kafka.Topic,
+		Idempotent:   true,
+		RequiredAcks: "all",
+	}
+	prod, err := producer.NewProducer(prodCfg)
+	if err != nil {
+		s.log.Fatalw("failed to create kafka producer", "error", err)
+	}
+	s.closer.Add(func(ctx context.Context) error {
+		s.log.Infow("Closing Kafka producer")
+		prod.Close()
+		return nil
+	})
+
+	workerCtx, cancel := context.WithCancel(context.Background())
+	s.closer.Add(func(_ context.Context) error {
+		cancel()
+		return nil
+	})
+
+	outboxRepo := postgres.NewOutboxPostgresRepo(s.txMgr)
+	w := outboxworker.NewWorker(
+		s.txMgr,
+		outboxRepo,
+		prod,
+		s.cfg.Outbox.BatchSize,
+		s.cfg.Outbox.Interval,
+		s.log,
+	)
+	go func() {
+		if err := w.Run(workerCtx); err != nil && !errors.Is(err, context.Canceled) {
+			s.log.Errorw("outbox worker stopped with error", "error", err)
+		}
+	}()
+
 	return s
 }
 
@@ -130,10 +169,11 @@ func (s *Server) setupGRPC() {
 
 	orderRepo := postgres.NewOrdersPostgresRepo(s.txMgr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(s.txMgr)
+	outboxRepo := postgres.NewOutboxPostgresRepo(s.txMgr)
 
 	strategyProvider := packaging.NewDefaultProvider()
 
-	svc := service.NewService(s.txMgr, orderRepo, hrRepo, strategyProvider, s.wp)
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo, outboxRepo, strategyProvider, s.wp)
 
 	hndl := handler.NewReportsHandler(svc)
 
@@ -143,7 +183,6 @@ func (s *Server) setupGRPC() {
 	handler.RegisterAdminService(s.grpcServer, s.wp)
 }
 
-// Run запускает REPL-приложение, обрабатывающее пользовательские команды.
 func (s *Server) Run(ctx context.Context) error {
 	if err := s.runGRPC(ctx); err != nil {
 		return err

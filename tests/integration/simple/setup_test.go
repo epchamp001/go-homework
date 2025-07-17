@@ -78,9 +78,10 @@ func TestMain(m *testing.M) {
 
 	orderRepo := postgres.NewOrdersPostgresRepo(txmngr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(txmngr)
+	outboxRepo := postgres.NewOutboxPostgresRepo(txmngr)
 	stratProv := packaging.NewDefaultProvider()
 	wp := wpool.NewWorkerPool(4, 16, log)
-	svc = service.NewService(txmngr, orderRepo, hrRepo, stratProv, wp)
+	svc = service.NewService(txmngr, orderRepo, hrRepo, outboxRepo, stratProv, wp)
 
 	code := m.Run()
 

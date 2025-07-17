@@ -48,15 +48,17 @@ type ServiceImpl struct {
 	tx         txmanager.TxManager
 	ordRepo    usecase.OrdersRepository
 	hrRepo     usecase.HistoryAndReturnsRepository
+	outboxRepo usecase.OutboxRepository
 	strategies packaging.Provider
 	wp         *wpool.Pool
 }
 
-func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository, prov packaging.Provider, wp *wpool.Pool) *ServiceImpl {
+func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository, outboxRepo usecase.OutboxRepository, prov packaging.Provider, wp *wpool.Pool) *ServiceImpl {
 	return &ServiceImpl{
 		tx:         tx,
 		ordRepo:    ordRepo,
 		hrRepo:     hrRepo,
+		outboxRepo: outboxRepo,
 		strategies: prov,
 		wp:         wp,
 	}

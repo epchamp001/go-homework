@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math/rand"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
@@ -53,6 +54,24 @@ func (s *ServiceImpl) ReturnOrder(ctx context.Context, orderID string) error {
 				return errs.Wrap(err, errs.CodeDatabaseError,
 					"failed to mark order returned", "order_id", orderID)
 			}
+
+			randomCourierID := rand.Int63n(1_000_000_000) + 1
+			kafkaEvt, err := models.NewOrderEvent(
+				models.OrderReturnedToCourier,
+				o.ID,
+				"returned_to_courier",
+				o.UserID,
+				models.Actor{Type: models.ActorCourier, ID: randomCourierID},
+			)
+			if err != nil {
+				return errs.Wrap(err, errs.CodeInternalError,
+					"failed to build return event", "order_id", orderID)
+			}
+			if err := s.outboxRepo.Add(txCtx, kafkaEvt); err != nil {
+				return errs.Wrap(err, errs.CodeDatabaseError,
+					"failed to enqueue return event", "order_id", orderID)
+			}
+
 			return nil
 		},
 	)

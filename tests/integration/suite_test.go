@@ -7,14 +7,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"pvz-cli/internal/app"
 	"pvz-cli/internal/config"
 	"pvz-cli/internal/config/storage"
+	"pvz-cli/internal/infrastructure/kafka/producer"
 	"pvz-cli/internal/repository/storage/postgres"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/logger"
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
 	"pvz-cli/tests/integration/testutil"
@@ -25,10 +28,16 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/twmb/franz-go/pkg/kgo"
+
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
+	"github.com/twmb/franz-go/pkg/kadm"
 )
 
 var dbCleanupMu sync.Mutex
@@ -39,6 +48,15 @@ type TestSuite struct {
 	masterPool    *pgxpool.Pool
 	svc           service.Service
 	wp            *wpool.Pool
+
+	outbox *postgres.OutboxPostgresRepo
+	tx     txmanager.TxManager
+	log    logger.Logger
+
+	kafkaCont testcontainers.Container
+	kafkaAddr string
+	kadm      *kadm.Client // общий admin
+	baseProd  producer.Config
 
 	fixtureNow time.Time
 }
@@ -95,14 +113,45 @@ func (s *TestSuite) SetupSuite() {
 
 	orderRepo := postgres.NewOrdersPostgresRepo(txmngr)
 	hrRepo := postgres.NewHistoryAndReturnsPostgresRepo(txmngr)
+	outboxRepo := postgres.NewOutboxPostgresRepo(txmngr)
 
 	strategyProvider := packaging.NewDefaultProvider()
 
 	wp := wpool.NewWorkerPool(4, 16, log)
 	s.wp = wp
 
-	svc := service.NewService(txmngr, orderRepo, hrRepo, strategyProvider, wp)
+	svc := service.NewService(txmngr, orderRepo, hrRepo, outboxRepo, strategyProvider, wp)
 	s.svc = svc
+
+	s.tx = txmngr
+	s.outbox = outboxRepo
+	s.log = log
+
+	kc, err := kafka.Run(ctx,
+		"confluentinc/confluent-local:7.4.0",
+		kafka.WithClusterID("test-cluster"))
+	s.Require().NoError(err)
+	s.kafkaCont = kc // сохраняем, чтобы убить в TearDown
+
+	addrs, _ := kc.Brokers(ctx)
+	s.kafkaAddr = addrs[0]
+
+	// admin-клиент
+	adminCli, _ := kgo.NewClient(kgo.SeedBrokers(s.kafkaAddr))
+	s.kadm = kadm.NewClient(adminCli)
+	// НЕ закрываем adminCli здесь – он живёт всю Suite
+
+	// smoke-test порта
+	conn, err := net.DialTimeout("tcp", s.kafkaAddr, 5*time.Second)
+	s.Require().NoError(err)
+	conn.Close()
+
+	// базовый конфиг продюсера – пользуем в тестах и только меняем Topic
+	s.baseProd = producer.Config{
+		Brokers:      []string{s.kafkaAddr},
+		Idempotent:   true,
+		RequiredAcks: "all",
+	}
 
 	s.fixtureNow = time.Date(2025, 6, 28, 10, 0, 0, 0, time.UTC)
 }
@@ -129,6 +178,13 @@ func (s *TestSuite) TearDownSuite() {
 
 func TestSuite_Run(t *testing.T) {
 	suite.Run(t, new(TestSuite))
+}
+
+func (s *TestSuite) createUniqueTopic(ctx context.Context) string {
+	topic := "pvz.events-log-" + uuid.NewString()[:8] // 8 символов достаточно
+	_, err := s.kadm.CreateTopic(ctx, 1, 1, nil, topic)
+	s.Require().NoError(err)
+	return topic
 }
 
 func (s *TestSuite) loadFixtures() {
