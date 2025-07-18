@@ -28,6 +28,7 @@ type Config struct {
 	Kafka      KafkaConfig           `mapstructure:"kafka"`
 	Outbox     OutboxConfig          `mapstructure:"outbox"`
 	OrderCache CacheConfig           `mapstructure:"cache"`
+	Metrics    MetricsConfig         `mapstructure:"metrics"`
 }
 
 // LoadConfig загружает и распаковывает конфигурацию по указанному пути.

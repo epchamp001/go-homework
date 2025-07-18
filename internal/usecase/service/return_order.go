@@ -100,5 +100,6 @@ func (s *ServiceImpl) ReturnOrder(ctx context.Context, orderID string) error {
 		s.cache.Set(usecase.OrderKey(orderID), cached)
 	}
 
+	s.metrics.IncOrdersReturned()
 	return nil
 }

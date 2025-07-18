@@ -27,6 +27,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
 		ordCache   *repoMock.OrderCacheMock
+		metrics    *repoMock.BussinesMetricsMock
 	}
 	type args struct {
 		ctx    context.Context
@@ -76,6 +77,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 				f.ordRepo.UpdateMock.Return(nil)
 				f.hrRepo.AddHistoryMock.Return(nil)
 				f.outboxRepo.AddMock.Return(nil)
+				f.metrics.IncOrdersIssuedMock.Set(func() {})
 			},
 			args:    args{ctx, "u", []string{"bad", "other"}},
 			wantErr: assert.Error,
@@ -88,7 +90,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 
 				f.ordCache.SetMock.
 					Set(func(string, *models.Order) {})
-				
+
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					switch id {
@@ -104,6 +106,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 				f.ordRepo.UpdateMock.Return(nil)
 				f.hrRepo.AddHistoryMock.Return(nil)
 				f.outboxRepo.AddMock.Return(nil)
+				f.metrics.IncOrdersIssuedMock.Set(func() {})
 			},
 			args:    args{ctx, "u", []string{"ok", "bis"}},
 			wantErr: assert.NoError,
@@ -126,6 +129,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
 				ordCache:   repoMock.NewOrderCacheMock(ctrl),
+				metrics:    repoMock.NewBussinesMetricsMock(ctrl),
 			}
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
@@ -135,7 +139,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 			wp := wpool.NewWorkerPool(4, 16, log)
 			defer wp.Stop()
 
-			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache)
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache, f.metrics)
 
 			got, err := svc.IssueOrders(tt.args.ctx, tt.args.userID, tt.args.ids)
 			tt.wantErr(t, err)
@@ -162,6 +166,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
 		ordCache   *repoMock.OrderCacheMock
+		metrics    *repoMock.BussinesMetricsMock
 	}
 	type args struct {
 		ctx     context.Context
@@ -184,6 +189,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Return(nil, errors.New("nf"))
+				f.metrics.IncOrdersIssuedMock.Set(func() {})
 			},
 			args:       args{ctx, "1", "u"},
 			wantbisErr: assert.Error,
@@ -198,6 +204,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 					ID: "2", UserID: "other",
 					Status: models.StatusAccepted, ExpiresAt: validExpiry,
 				}, nil)
+				f.metrics.IncOrdersIssuedMock.Set(func() {})
 			},
 			args:       args{ctx, "2", "u"},
 			wantbisErr: assert.Error,
@@ -211,6 +218,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 					pgx.TxAccessMode, func(context.Context) error) error {
 					return errors.New("deadlock")
 				})
+				f.metrics.IncOrdersIssuedMock.Set(func() {})
 			},
 			args:       args{ctx, "3", "u"},
 			wantbisErr: assert.NoError,
@@ -233,6 +241,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 				f.ordRepo.UpdateMock.Return(nil)
 				f.hrRepo.AddHistoryMock.Return(nil)
 				f.outboxRepo.AddMock.Return(nil)
+				f.metrics.IncOrdersIssuedMock.Set(func() {})
 			},
 			args:       args{ctx, "4", "u"},
 			wantbisErr: assert.NoError,
@@ -252,6 +261,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
 				ordCache:   repoMock.NewOrderCacheMock(ctrl),
+				metrics:    repoMock.NewBussinesMetricsMock(ctrl),
 			}
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
@@ -264,7 +274,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 			wp := wpool.NewWorkerPool(4, 16, log)
 			defer wp.Stop()
 
-			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache)
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache, f.metrics)
 
 			bis, txErr := svc.issueOne(tt.args.ctx, tt.args.orderID, tt.args.userID, now)
 			tt.wantbisErr(t, bis)

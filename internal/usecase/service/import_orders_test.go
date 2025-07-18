@@ -152,7 +152,7 @@ func TestServiceImpl_ImportOrders(t *testing.T) {
 				hrRepo:   repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				ordCache: repoMock.NewOrderCacheMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil, nil, f.ordCache)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil, nil, f.ordCache, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)

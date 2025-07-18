@@ -145,5 +145,7 @@ func (s *ServiceImpl) returnOneByClient(
 	if txErr == nil && bisErr == nil {
 		s.cache.Set(usecase.OrderKey(orderID), cached)
 	}
+
+	s.metrics.IncOrdersReturned()
 	return
 }

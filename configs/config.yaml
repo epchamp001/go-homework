@@ -72,3 +72,7 @@ outbox:
 cache:
   capacity: 10000
   ttl: "5m"
+
+metrics:
+  endpoint: "/metrics"
+  port: 9000

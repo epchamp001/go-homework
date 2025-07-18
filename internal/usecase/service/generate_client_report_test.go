@@ -105,7 +105,7 @@ func TestServiceImpl_generateClientReport(t *testing.T) {
 				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
 			}
 
-			service := NewService(f.tx, f.ordRepo, nil, nil, nil, nil, nil)
+			service := NewService(f.tx, f.ordRepo, nil, nil, nil, nil, nil, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(f)
@@ -176,7 +176,7 @@ func TestServiceImpl_GenerateClientReportByte(t *testing.T) {
 		return orders, nil
 	})
 
-	service := NewService(tx, ordRepo, nil, nil, nil, nil, nil)
+	service := NewService(tx, ordRepo, nil, nil, nil, nil, nil, nil)
 
 	data, err := service.GenerateClientReportByte(ctx, "orders")
 	assert.NoError(t, err)

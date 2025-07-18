@@ -28,6 +28,7 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 		ordCache   *repoMock.OrderCacheMock
 		pkgSvc     *pkgMock.PackagingStrategyMock
 		strategy   *pkgMock.ProviderMock
+		metrics    *repoMock.BussinesMetricsMock
 	}
 
 	type args struct {
@@ -95,6 +96,7 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 						assert.Equal(t, usecase.OrderKey(a.orderID), key)
 						assert.Equal(t, a.orderID, val.ID)
 					})
+				f.metrics.IncOrdersAcceptedMock.Set(func() {})
 			}, args: args{
 				ctx:     ctx,
 				orderID: "123",
@@ -318,9 +320,10 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 				pkgSvc:     pkgMock.NewPackagingStrategyMock(ctrl),
 				strategy:   pkgMock.NewProviderMock(ctrl),
 				ordCache:   repoMock.NewOrderCacheMock(ctrl),
+				metrics:    repoMock.NewBussinesMetricsMock(ctrl),
 			}
 
-			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.outboxRepo, fieldsForTests.strategy, nil, fieldsForTests.ordCache)
+			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.outboxRepo, fieldsForTests.strategy, nil, fieldsForTests.ordCache, fieldsForTests.metrics)
 
 			if tt.prepare != nil {
 				tt.prepare(fieldsForTests, tt.args)

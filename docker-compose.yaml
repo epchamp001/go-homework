@@ -138,11 +138,53 @@ services:
       cub kafka-ready -b kafka0:29092 1 30 && \
       kafka-topics --create --topic pvz.events-log --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka0:29092'"
 
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-remote-write-receiver'
+    networks:
+      - pvz-network
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    env_file:
+      - .env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
+    depends_on:
+      - prometheus
+    networks:
+      - pvz-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"   # для UI
+      - "14268:14268"   # для коллектора (HTTP)
+      - "14250:14250"   # gRPC endpoint для коллектора
+      - "9411:9411"     # для Zipkin API
+    networks:
+      - pvz-network
+
 volumes:
   postgres-master-data:
   postgres-replica1-data:
   postgres-replica2-data:
   pgadmin-data:
+  grafana-data:
 
 networks:
   pvz-network:

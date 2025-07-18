@@ -303,8 +303,6 @@ mocks:
 	minimock -i $(INTERFACE) -o $(OUT) -n $(MOCK_NAME)
 
 
-
-
 .PHONY: tests coverage
 
 tests:
@@ -334,4 +332,11 @@ coverage:
 
 local-run:
 	go run ./cmd/pvz/main.go ./cmd/pvz/setup_flag.go --config ./configs/config.yaml --env .env
+
+
+k6-run:
+	K6_PROMETHEUS_RW_SERVER_URL=http://localhost:9090/api/v1/write \
+    k6 run \
+      --out experimental-prometheus-rw \
+      scripts/k6/accept_order_load.js
 

@@ -127,5 +127,7 @@ func (s *ServiceImpl) issueOne(ctx context.Context, orderID, userID string, now 
 		s.cache.Set(usecase.OrderKey(orderID), cached)
 	}
 
+	s.metrics.IncOrdersIssued()
+
 	return
 }

@@ -25,6 +25,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
 		ordCache   *repoMock.OrderCacheMock
+		metrics    *repoMock.BussinesMetricsMock
 	}
 	type args struct {
 		ctx     context.Context
@@ -244,6 +245,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 					assert.Equal(t, "7", evt.Order.ID)
 					return nil
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx: ctx, orderID: "7"},
 			wantErr: assert.NoError,
@@ -262,8 +264,9 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
 				ordCache:   repoMock.NewOrderCacheMock(ctrl),
+				metrics:    repoMock.NewBussinesMetricsMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, nil, f.ordCache)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, nil, f.ordCache, f.metrics)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
