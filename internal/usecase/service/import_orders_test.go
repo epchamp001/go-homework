@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	repoMock "pvz-cli/internal/usecase/mock"
 	txMock "pvz-cli/pkg/txmanager/mock"
 	"testing"
@@ -19,9 +20,10 @@ func TestServiceImpl_ImportOrders(t *testing.T) {
 	ctx := context.Background()
 
 	type fields struct {
-		tx      *txMock.TxManagerMock
-		ordRepo *repoMock.OrdersRepositoryMock
-		hrRepo  *repoMock.HistoryAndReturnsRepositoryMock
+		tx       *txMock.TxManagerMock
+		ordRepo  *repoMock.OrdersRepositoryMock
+		hrRepo   *repoMock.HistoryAndReturnsRepositoryMock
+		ordCache *repoMock.OrderCacheMock
 	}
 	type args struct {
 		ctx    context.Context
@@ -121,6 +123,15 @@ func TestServiceImpl_ImportOrders(t *testing.T) {
 					assert.WithinDuration(t, now, evt.Time, time.Second)
 					return nil
 				})
+
+				expected := map[string]struct{}{"1": {}, "2": {}}
+
+				f.ordCache.SetMock.Set(func(k string, o *models.Order) {
+					assert.Equal(t, usecase.OrderKey(o.ID), k)
+					_, ok := expected[o.ID]
+					assert.True(t, ok, "unexpected order ID cached")
+					delete(expected, o.ID)
+				})
 			},
 			args:    args{ctx: ctx, orders: []*models.Order{{ID: "1"}, {ID: "2"}}},
 			want:    2,
@@ -136,11 +147,12 @@ func TestServiceImpl_ImportOrders(t *testing.T) {
 			ctrl := minimock.NewController(t)
 
 			f := &fields{
-				tx:      txMock.NewTxManagerMock(ctrl),
-				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
-				hrRepo:  repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				tx:       txMock.NewTxManagerMock(ctrl),
+				ordRepo:  repoMock.NewOrdersRepositoryMock(ctrl),
+				hrRepo:   repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
+				ordCache: repoMock.NewOrderCacheMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil, nil)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil, nil, f.ordCache)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)

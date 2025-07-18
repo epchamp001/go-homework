@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
@@ -60,18 +61,27 @@ func (s *ServiceImpl) IssueOrders(ctx context.Context, userID string, ids []stri
 
 func (s *ServiceImpl) issueOne(ctx context.Context, orderID, userID string, now time.Time) (bisErr, txErr error) {
 
+	cached, cacheHit := s.cache.Get(usecase.OrderKey(orderID))
+
 	txErr = s.tx.WithTx(
 		ctx,
 		txmanager.IsolationLevelRepeatableRead,
 		txmanager.AccessModeReadWrite,
 		func(txCtx context.Context) error {
 
-			o, err := s.ordRepo.Get(txCtx, orderID)
-			if err != nil {
-				bisErr = errs.Wrap(err, errs.CodeRecordNotFound,
-					"order not found", "order_id", orderID)
-				return nil
+			var o *models.Order
+			if cacheHit {
+				o = cached
+			} else {
+				var err error
+				o, err = s.ordRepo.Get(txCtx, orderID)
+				if err != nil {
+					bisErr = errs.Wrap(err, errs.CodeRecordNotFound,
+						"order not found", "order_id", orderID)
+					return nil
+				}
 			}
+
 			if err := validateIssue(o, userID, now); err != nil {
 				bisErr = err
 				return nil
@@ -108,8 +118,14 @@ func (s *ServiceImpl) issueOne(ctx context.Context, orderID, userID string, now 
 				return nil
 			}
 
+			cached = o
 			return nil
 		},
 	)
+
+	if txErr == nil && bisErr == nil {
+		s.cache.Set(usecase.OrderKey(orderID), cached)
+	}
+
 	return
 }

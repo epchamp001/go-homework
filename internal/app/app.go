@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"pvz-cli/internal/config"
+	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/handler"
 	"pvz-cli/internal/handler/middleware"
 	"pvz-cli/internal/infrastructure/kafka/producer"
@@ -19,6 +20,8 @@ import (
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
 	"pvz-cli/pkg/auth"
+	"pvz-cli/pkg/cache"
+	"pvz-cli/pkg/cache/lru"
 	"pvz-cli/pkg/closer"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/logger"
@@ -173,7 +176,18 @@ func (s *Server) setupGRPC() {
 
 	strategyProvider := packaging.NewDefaultProvider()
 
-	svc := service.NewService(s.txMgr, orderRepo, hrRepo, outboxRepo, strategyProvider, s.wp)
+	cacheCfg := cache.Config[string]{
+		Capacity: s.cfg.OrderCache.Capacity,
+		TTL:      s.cfg.OrderCache.TTL,
+		Strategy: lru.NewLRUStrategy[string](s.cfg.OrderCache.Capacity),
+	}
+	orderCache := cache.New[string, *models.Order](cacheCfg)
+	s.closer.Add(func(_ context.Context) error {
+		orderCache.Close()
+		return nil
+	})
+
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo, outboxRepo, strategyProvider, s.wp, orderCache)
 
 	hndl := handler.NewReportsHandler(svc)
 

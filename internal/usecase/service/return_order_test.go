@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	repoMock "pvz-cli/internal/usecase/mock"
 	txMock "pvz-cli/pkg/txmanager/mock"
 	"testing"
@@ -23,6 +24,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		ordRepo    *repoMock.OrdersRepositoryMock
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
+		ordCache   *repoMock.OrderCacheMock
 	}
 	type args struct {
 		ctx     context.Context
@@ -45,6 +47,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		{
 			name: "GetNotFound",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -63,6 +66,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		{
 			name: "ValidateReturnFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -87,6 +91,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		{
 			name: "AddReturnFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -116,6 +121,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		{
 			name: "AddHistoryFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -146,6 +152,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		{
 			name: "UpdateFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -180,6 +187,7 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		{
 			name: "TransactionFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					_ context.Context,
 					_ pgx.TxIsoLevel,
@@ -195,6 +203,12 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 		{
 			name: "Success",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false) // промах
+				f.ordCache.SetMock.Set(func(k string, o *models.Order) {
+					assert.Equal(t, usecase.OrderKey(a.orderID), k)
+					assert.Equal(t, models.StatusReturned, o.Status)
+				})
+
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -247,8 +261,9 @@ func TestServiceImpl_ReturnOrder(t *testing.T) {
 				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
+				ordCache:   repoMock.NewOrderCacheMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, nil)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, nil, f.ordCache)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)

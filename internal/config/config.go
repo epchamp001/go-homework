@@ -19,14 +19,15 @@ import (
 
 // Config объединяет все конфигурации в одну структуру.
 type Config struct {
-	Logging    LoggingConfig    `mapstructure:"logging"`
-	GRPCServer GRPCServerConfig `mapstructure:"grpc_server"`
-	Gateway    GatewayConfig    `mapstructure:"gateway"`
-	Storage    strgCfg.StorageConfig
-	Workers    WorkersConfig `mapstructure:"workers"`
-	Admin      AdminConfig   `mapstructure:"admin"`
-	Kafka      KafkaConfig   `mapstructure:"kafka"`
-	Outbox     OutboxConfig  `mapstructure:"outbox"`
+	Logging    LoggingConfig         `mapstructure:"logging"`
+	GRPCServer GRPCServerConfig      `mapstructure:"grpc_server"`
+	Gateway    GatewayConfig         `mapstructure:"gateway"`
+	Storage    strgCfg.StorageConfig `mapstructure:"storage"`
+	Workers    WorkersConfig         `mapstructure:"workers"`
+	Admin      AdminConfig           `mapstructure:"admin"`
+	Kafka      KafkaConfig           `mapstructure:"kafka"`
+	Outbox     OutboxConfig          `mapstructure:"outbox"`
+	OrderCache CacheConfig           `mapstructure:"cache"`
 }
 
 // LoadConfig загружает и распаковывает конфигурацию по указанному пути.

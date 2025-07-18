@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"time"
@@ -41,6 +42,10 @@ func (s *ServiceImpl) ImportOrders(ctx context.Context, orders []*models.Order) 
 	if errTx != nil {
 		return 0, errs.Wrap(errTx,
 			errs.CodeDBTransactionError, "import orders tx failed")
+	}
+
+	for _, o := range orders {
+		s.cache.Set(usecase.OrderKey(o.ID), o)
 	}
 
 	return len(orders), nil

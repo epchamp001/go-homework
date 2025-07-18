@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	repoMock "pvz-cli/internal/usecase/mock"
 	"pvz-cli/pkg/logger"
 	txMock "pvz-cli/pkg/txmanager/mock"
@@ -25,6 +26,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 		ordRepo    *repoMock.OrdersRepositoryMock
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
+		ordCache   *repoMock.OrderCacheMock
 	}
 	type args struct {
 		ctx    context.Context
@@ -47,6 +49,12 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 			prepare: func(f *fields, a args) {
 				// первый id "bad" вернёт txErr
 				call := 0
+				f.ordCache.GetMock.
+					Return(nil, false)
+
+				f.ordCache.SetMock.
+					Set(func(string, *models.Order) {})
+
 				f.tx.WithTxMock.Set(func(
 					_ context.Context, _ pgx.TxIsoLevel, _ pgx.TxAccessMode,
 					fn func(context.Context) error,
@@ -75,6 +83,12 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 		{
 			name: "Mixed results: bisErr & ok",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.
+					Return(nil, false)
+
+				f.ordCache.SetMock.
+					Set(func(string, *models.Order) {})
+				
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					switch id {
@@ -111,6 +125,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
+				ordCache:   repoMock.NewOrderCacheMock(ctrl),
 			}
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
@@ -120,7 +135,7 @@ func TestServiceImpl_IssueOrders(t *testing.T) {
 			wp := wpool.NewWorkerPool(4, 16, log)
 			defer wp.Stop()
 
-			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache)
 
 			got, err := svc.IssueOrders(tt.args.ctx, tt.args.userID, tt.args.ids)
 			tt.wantErr(t, err)
@@ -146,6 +161,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 		ordRepo    *repoMock.OrdersRepositoryMock
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
+		ordCache   *repoMock.OrderCacheMock
 	}
 	type args struct {
 		ctx     context.Context
@@ -165,6 +181,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 		{
 			name: "order not found -> bisErr",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Return(nil, errors.New("nf"))
 			},
@@ -175,6 +192,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 		{
 			name: "wrong user -> validation bisErr",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Return(&models.Order{
 					ID: "2", UserID: "other",
@@ -188,6 +206,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 		{
 			name: "tx aborted -> txErr",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(context.Context, pgx.TxIsoLevel,
 					pgx.TxAccessMode, func(context.Context) error) error {
 					return errors.New("deadlock")
@@ -200,6 +219,12 @@ func TestServiceImpl_issueOne(t *testing.T) {
 		{
 			name: "happy path",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
+				f.ordCache.SetMock.Set(func(k string, o *models.Order) { // ②
+					assert.Equal(t, usecase.OrderKey(a.orderID), k)
+					assert.Equal(t, a.orderID, o.ID)
+					assert.Equal(t, models.StatusIssued, o.Status)
+				})
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Return(&models.Order{
 					ID: a.orderID, UserID: a.userID,
@@ -226,6 +251,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
+				ordCache:   repoMock.NewOrderCacheMock(ctrl),
 			}
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
@@ -238,7 +264,7 @@ func TestServiceImpl_issueOne(t *testing.T) {
 			wp := wpool.NewWorkerPool(4, 16, log)
 			defer wp.Stop()
 
-			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache)
 
 			bis, txErr := svc.issueOne(tt.args.ctx, tt.args.orderID, tt.args.userID, now)
 			tt.wantbisErr(t, bis)

@@ -7,4 +7,6 @@ type EvictStrategy[K comparable] interface {
 	RecordInsertion(K) (evictK K, shouldEvict bool)
 	// RecordDeletion сообщает стратегии, что ключ удалён извне.
 	RecordDeletion(K)
+	// Reset сбрасывает внутреннее состояние стратегии.
+	Reset()
 }

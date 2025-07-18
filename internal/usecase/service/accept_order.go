@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"strings"
@@ -88,5 +89,6 @@ func (s *ServiceImpl) AcceptOrder(
 		return 0, errs.Wrap(err, errs.CodeDBTransactionError, "transaction failed", "order_id", orderID)
 	}
 
+	s.cache.Set(usecase.OrderKey(orderID), o)
 	return total, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
@@ -62,9 +63,11 @@ func (s *ServiceImpl) ReturnOrdersByClient(
 	return agg, nil
 }
 
-func (s *ServiceImpl) returnOneByClient( // nolint: gocognit
+func (s *ServiceImpl) returnOneByClient(
 	ctx context.Context, orderID, userID string, now time.Time,
 ) (bisErr, txErr error) {
+
+	cached, cacheHit := s.cache.Get(usecase.OrderKey(orderID))
 
 	txErr = s.tx.WithTx(
 		ctx,
@@ -72,11 +75,17 @@ func (s *ServiceImpl) returnOneByClient( // nolint: gocognit
 		txmanager.AccessModeReadWrite,
 		func(txCtx context.Context) error {
 
-			o, err := s.ordRepo.Get(txCtx, orderID)
-			if err != nil {
-				bisErr = errs.Wrap(err, errs.CodeRecordNotFound,
-					"order not found", "order_id", orderID)
-				return nil
+			var o *models.Order
+			if cacheHit {
+				o = cached
+			} else {
+				var err error
+				o, err = s.ordRepo.Get(txCtx, orderID)
+				if err != nil {
+					bisErr = errs.Wrap(err, errs.CodeRecordNotFound,
+						"order not found", "order_id", orderID)
+					return nil
+				}
 			}
 
 			if err := validateClientReturn(o, userID, now); err != nil {
@@ -128,8 +137,13 @@ func (s *ServiceImpl) returnOneByClient( // nolint: gocognit
 				return nil
 			}
 
+			cached = o
 			return nil
 		},
 	)
+
+	if txErr == nil && bisErr == nil {
+		s.cache.Set(usecase.OrderKey(orderID), cached)
+	}
 	return
 }
