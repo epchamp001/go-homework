@@ -51,9 +51,11 @@ type ServiceImpl struct {
 	outboxRepo usecase.OutboxRepository
 	strategies packaging.Provider
 	wp         *wpool.Pool
+	cache      usecase.OrderCache
+	metrics    usecase.BussinesMetrics
 }
 
-func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository, outboxRepo usecase.OutboxRepository, prov packaging.Provider, wp *wpool.Pool) *ServiceImpl {
+func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo usecase.HistoryAndReturnsRepository, outboxRepo usecase.OutboxRepository, prov packaging.Provider, wp *wpool.Pool, cache usecase.OrderCache, metrics usecase.BussinesMetrics) *ServiceImpl {
 	return &ServiceImpl{
 		tx:         tx,
 		ordRepo:    ordRepo,
@@ -61,5 +63,7 @@ func NewService(tx txmanager.TxManager, ordRepo usecase.OrdersRepository, hrRepo
 		outboxRepo: outboxRepo,
 		strategies: prov,
 		wp:         wp,
+		cache:      cache,
+		metrics:    metrics,
 	}
 }

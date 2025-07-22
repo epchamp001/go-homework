@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
 	"pvz-cli/internal/handler/mappers"
 	"pvz-cli/pkg/errs"
 	pvzpb "pvz-cli/pkg/pvz"
@@ -15,6 +16,9 @@ func (s *OrderServiceServer) AcceptOrder(
 	ctx context.Context,
 	req *pvzpb.AcceptOrderRequest,
 ) (*pvzpb.OrderResponse, error) {
+	ctx, span := otel.Tracer("pvz-cli/handler/orders").Start(ctx, "Handler.AcceptOrder")
+	defer span.End()
+	
 	if req == nil {
 		return nil, grpcstatus.Error(codes.InvalidArgument, "AcceptOrderRequest is nil")
 	}

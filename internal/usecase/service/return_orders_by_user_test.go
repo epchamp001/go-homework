@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	repoMock "pvz-cli/internal/usecase/mock"
 	"pvz-cli/pkg/logger"
 	txMock "pvz-cli/pkg/txmanager/mock"
@@ -25,6 +26,8 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		ordRepo    *repoMock.OrdersRepositoryMock
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
+		ordCache   *repoMock.OrderCacheMock
+		metrics    *repoMock.BussinesMetricsMock
 	}
 	type args struct {
 		ctx    context.Context
@@ -44,6 +47,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		{
 			name: "GetNotFound",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -56,6 +60,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return nil, errors.New("not found")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx, "user1", []string{"1"}},
 			wantErr: assert.NoError,
@@ -66,6 +71,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		{
 			name: "ValidationFailed_WrongUser",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -82,6 +88,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 						IssuedAt: &now,
 					}, nil
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx, "user1", []string{"2"}},
 			wantErr: assert.NoError,
@@ -92,6 +99,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		{
 			name: "AddReturnFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -112,6 +120,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 					assert.Equal(t, "3", rec.OrderID)
 					return errors.New("add return failed")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx, "user1", []string{"3"}},
 			wantErr: assert.NoError,
@@ -122,6 +131,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		{
 			name: "UpdateFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -145,6 +155,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 					assert.Equal(t, models.StatusReturned, o.Status)
 					return errors.New("update failed")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx, "user1", []string{"4"}},
 			wantErr: assert.NoError,
@@ -155,6 +166,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		{
 			name: "AddHistoryFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -181,6 +193,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 					assert.Equal(t, models.StatusReturned, evt.Status)
 					return errors.New("add history failed")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx, "user1", []string{"5"}},
 			wantErr: assert.NoError,
@@ -191,6 +204,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		{
 			name: "TransactionFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(func(
 					_ context.Context,
 					_ pgx.TxIsoLevel,
@@ -199,6 +213,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 				) error {
 					return errors.New("tx aborted")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx, "user1", []string{"6"}},
 			wantErr: assert.Error,
@@ -206,6 +221,14 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 		{
 			name: "SuccessMultiple",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
+				f.ordCache.SetMock.Set(func(k string, o *models.Order) {
+					assert.Contains(t,
+						[]string{usecase.OrderKey("7"), usecase.OrderKey("8")},
+						k,
+					)
+					assert.Equal(t, models.StatusReturned, o.Status)
+				})
 				f.tx.WithTxMock.Set(func(
 					txCtx context.Context,
 					_ pgx.TxIsoLevel,
@@ -237,6 +260,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 					assert.Contains(t, []string{"7", "8"}, evt.Order.ID)
 					return nil
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:    args{ctx, "user1", []string{"7", "8"}},
 			wantErr: assert.NoError,
@@ -259,6 +283,8 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
+				ordCache:   repoMock.NewOrderCacheMock(ctrl),
+				metrics:    repoMock.NewBussinesMetricsMock(ctrl),
 			}
 
 			if tt.prepare != nil {
@@ -268,7 +294,7 @@ func TestServiceImpl_ReturnOrdersByClient(t *testing.T) {
 			log, _ := logger.NewLogger(logger.WithMode("prod"))
 			wp := wpool.NewWorkerPool(4, 16, log)
 			defer wp.Stop()
-			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache, f.metrics)
 
 			res, err := svc.ReturnOrdersByClient(tt.args.ctx, tt.args.userID, tt.args.ids)
 			tt.wantErr(t, err)
@@ -295,6 +321,8 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		ordRepo    *repoMock.OrdersRepositoryMock
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
+		ordCache   *repoMock.OrderCacheMock
+		metrics    *repoMock.BussinesMetricsMock
 	}
 	type args struct {
 		ctx     context.Context
@@ -313,10 +341,12 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "OrderNotFound",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return nil, errors.New("not found")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "1", "user1", now},
 			wantBisErr: assert.Error,
@@ -325,6 +355,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "WrongUser",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return &models.Order{
@@ -334,6 +365,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 						IssuedAt: &now,
 					}, nil
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "2", "user1", now},
 			wantBisErr: assert.Error,
@@ -342,6 +374,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "AddReturnFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return &models.Order{
@@ -356,6 +389,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 					assert.Equal(t, a.orderID, rec.OrderID)
 					return errors.New("return failed")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "3", "user1", now},
 			wantBisErr: assert.Error,
@@ -364,6 +398,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "UpdateFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return &models.Order{
@@ -381,6 +416,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 					assert.Equal(t, models.StatusReturned, o.Status)
 					return errors.New("update failed")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "4", "user1", now},
 			wantBisErr: assert.Error,
@@ -389,6 +425,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "AddHistoryFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return &models.Order{
@@ -409,6 +446,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 					assert.Equal(t, models.StatusReturned, evt.Status)
 					return errors.New("history failed")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "5", "user1", now},
 			wantBisErr: assert.Error,
@@ -417,6 +455,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "OutboxFailed",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return &models.Order{
@@ -440,6 +479,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 					assert.Equal(t, models.OrderReturnedByClient, evt.EventType)
 					return errors.New("outbox failed")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "6", "user1", now},
 			wantBisErr: assert.Error,
@@ -448,6 +488,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "TxAborted",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
 
 				f.tx.WithTxMock.Set(func(
 					_ context.Context,
@@ -457,6 +498,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 				) error {
 					return errors.New("deadlock")
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "7", "user1", now},
 			wantBisErr: assert.NoError,
@@ -465,6 +507,12 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 		{
 			name: "Success",
 			prepare: func(f *fields, a args) {
+				f.ordCache.GetMock.Return(nil, false)
+				f.ordCache.SetMock.Set(func(k string, o *models.Order) {
+					assert.Equal(t, usecase.OrderKey(a.orderID), k)
+					assert.Equal(t, models.StatusReturned, o.Status)
+				})
+
 				f.tx.WithTxMock.Set(pass)
 				f.ordRepo.GetMock.Set(func(_ context.Context, id string) (*models.Order, error) {
 					return &models.Order{
@@ -490,6 +538,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 					assert.Equal(t, a.orderID, evt.Order.ID)
 					return nil
 				})
+				f.metrics.IncOrdersReturnedMock.Set(func() {})
 			},
 			args:       args{ctx, "8", "user1", now},
 			wantBisErr: assert.NoError,
@@ -509,6 +558,8 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 				ordRepo:    repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:     repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
+				ordCache:   repoMock.NewOrderCacheMock(ctrl),
+				metrics:    repoMock.NewBussinesMetricsMock(ctrl),
 			}
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)
@@ -518,7 +569,7 @@ func TestServiceImpl_returnOneByClient(t *testing.T) {
 			wp := wpool.NewWorkerPool(1, 1, log)
 			defer wp.Stop()
 
-			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp)
+			svc := NewService(f.tx, f.ordRepo, f.hrRepo, f.outboxRepo, nil, wp, f.ordCache, f.metrics)
 
 			bisErr, txErr := svc.returnOneByClient(
 				tt.args.ctx, tt.args.orderID, tt.args.userID, tt.args.now,

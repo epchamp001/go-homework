@@ -9,9 +9,12 @@ import (
 	"pvz-cli/internal/app"
 	"pvz-cli/internal/config"
 	"pvz-cli/internal/config/storage"
+	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/repository/storage/postgres"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/cache"
+	"pvz-cli/pkg/cache/lru"
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
 	"pvz-cli/tests/integration/testutil"
@@ -81,10 +84,18 @@ func TestMain(m *testing.M) {
 	outboxRepo := postgres.NewOutboxPostgresRepo(txmngr)
 	stratProv := packaging.NewDefaultProvider()
 	wp := wpool.NewWorkerPool(4, 16, log)
-	svc = service.NewService(txmngr, orderRepo, hrRepo, outboxRepo, stratProv, wp)
+	cacheCfg := cache.Config[string]{
+		Capacity: cfg.OrderCache.Capacity,
+		TTL:      cfg.OrderCache.TTL,
+		Strategy: lru.NewLRUStrategy[string](cfg.OrderCache.Capacity),
+	}
+	orderCache := cache.New[string, *models.Order](cacheCfg)
+
+	svc = service.NewService(txmngr, orderRepo, hrRepo, outboxRepo, stratProv, wp, orderCache)
 
 	code := m.Run()
 
+	orderCache.Close()
 	masterPool.Close()
 	wp.Stop()
 	pgC.Terminate(ctx)

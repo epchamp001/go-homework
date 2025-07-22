@@ -3,6 +3,9 @@ package postgres
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"pvz-cli/internal/domain/codes"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
@@ -70,6 +73,15 @@ const (
 )
 
 func (r *OrdersPostgresRepo) Create(ctx context.Context, o *models.Order) error {
+	ctx, span := otel.Tracer("repo.orders").Start(ctx, "OrdersRepo.Create",
+		trace.WithAttributes(
+			attribute.String("db.system", "postgresql"),
+			attribute.String("order.id", o.ID),
+			attribute.String("order.user", o.UserID),
+		),
+	)
+	defer span.End()
+
 	exec := r.conn.GetExecutor(ctx)
 
 	_, err := exec.Exec(ctx,

@@ -143,7 +143,7 @@ func TestServiceImpl_ListOrders(t *testing.T) {
 				ordRepo: repoMock.NewOrdersRepositoryMock(ctrl),
 				hrRepo:  repoMock.NewHistoryAndReturnsRepositoryMock(ctrl),
 			}
-			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil, nil)
+			service := NewService(f.tx, f.ordRepo, f.hrRepo, nil, nil, nil, nil, nil)
 
 			if tt.prepare != nil {
 				tt.prepare(f, tt.args)

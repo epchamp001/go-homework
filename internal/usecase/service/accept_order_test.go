@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	repoMock "pvz-cli/internal/usecase/mock"
 	pkgMock "pvz-cli/internal/usecase/packaging/mock"
 	txMock "pvz-cli/pkg/txmanager/mock"
@@ -24,8 +25,10 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 		ordRepo    *repoMock.OrdersRepositoryMock
 		hrRepo     *repoMock.HistoryAndReturnsRepositoryMock
 		outboxRepo *repoMock.OutboxRepositoryMock
+		ordCache   *repoMock.OrderCacheMock
 		pkgSvc     *pkgMock.PackagingStrategyMock
 		strategy   *pkgMock.ProviderMock
+		metrics    *repoMock.BussinesMetricsMock
 	}
 
 	type args struct {
@@ -87,6 +90,13 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 						assert.Equal(t, a.orderID, evt.Order.ID)
 						return nil
 					})
+
+				f.ordCache.SetMock.
+					Set(func(key string, val *models.Order) {
+						assert.Equal(t, usecase.OrderKey(a.orderID), key)
+						assert.Equal(t, a.orderID, val.ID)
+					})
+				f.metrics.IncOrdersAcceptedMock.Set(func() {})
 			}, args: args{
 				ctx:     ctx,
 				orderID: "123",
@@ -309,9 +319,11 @@ func TestServiceImpl_AcceptOrder(t *testing.T) {
 				outboxRepo: repoMock.NewOutboxRepositoryMock(ctrl),
 				pkgSvc:     pkgMock.NewPackagingStrategyMock(ctrl),
 				strategy:   pkgMock.NewProviderMock(ctrl),
+				ordCache:   repoMock.NewOrderCacheMock(ctrl),
+				metrics:    repoMock.NewBussinesMetricsMock(ctrl),
 			}
 
-			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.outboxRepo, fieldsForTests.strategy, nil)
+			s := NewService(fieldsForTests.tx, fieldsForTests.ordRepo, fieldsForTests.hrRepo, fieldsForTests.outboxRepo, fieldsForTests.strategy, nil, fieldsForTests.ordCache, fieldsForTests.metrics)
 
 			if tt.prepare != nil {
 				tt.prepare(fieldsForTests, tt.args)

@@ -13,10 +13,13 @@ import (
 	"pvz-cli/internal/app"
 	"pvz-cli/internal/config"
 	"pvz-cli/internal/config/storage"
+	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/infrastructure/kafka/producer"
 	"pvz-cli/internal/repository/storage/postgres"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
+	"pvz-cli/pkg/cache"
+	"pvz-cli/pkg/cache/lru"
 	"pvz-cli/pkg/logger"
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
@@ -57,6 +60,8 @@ type TestSuite struct {
 	kafkaAddr string
 	kadm      *kadm.Client // общий admin
 	baseProd  producer.Config
+
+	ordCache *cache.Cache[string, *models.Order]
 
 	fixtureNow time.Time
 }
@@ -120,7 +125,14 @@ func (s *TestSuite) SetupSuite() {
 	wp := wpool.NewWorkerPool(4, 16, log)
 	s.wp = wp
 
-	svc := service.NewService(txmngr, orderRepo, hrRepo, outboxRepo, strategyProvider, wp)
+	cacheCfg := cache.Config[string]{
+		Capacity: cfg.OrderCache.Capacity,
+		TTL:      cfg.OrderCache.TTL,
+		Strategy: lru.NewLRUStrategy[string](cfg.OrderCache.Capacity),
+	}
+	orderCache := cache.New[string, *models.Order](cacheCfg)
+	s.ordCache = orderCache
+	svc := service.NewService(txmngr, orderRepo, hrRepo, outboxRepo, strategyProvider, wp, orderCache)
 	s.svc = svc
 
 	s.tx = txmngr
@@ -160,6 +172,8 @@ func (s *TestSuite) TearDownTest() {
 	dbCleanupMu.Lock()
 	defer dbCleanupMu.Unlock()
 
+	s.ordCache.Flush()
+
 	ctx := context.Background()
 	if err := s.truncateAll(ctx, s.masterPool); err != nil {
 		s.T().Fatalf("truncate: %v", err)
@@ -170,6 +184,7 @@ func (s *TestSuite) TearDownSuite() {
 	ctx, ctxCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer ctxCancel()
 
+	s.ordCache.Close()
 	s.masterPool.Close()
 	s.Require().NoError(s.psqlContainer.Terminate(ctx))
 

@@ -8,17 +8,35 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"golang.org/x/time/rate"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/encoding/protojson"
 	"net"
 	"net/http"
 	"pvz-cli/internal/config"
+	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/handler"
 	"pvz-cli/internal/handler/middleware"
 	"pvz-cli/internal/infrastructure/kafka/producer"
+	"pvz-cli/internal/metrics"
 	"pvz-cli/internal/repository/storage/postgres"
 	"pvz-cli/internal/usecase/outboxworker"
 	"pvz-cli/internal/usecase/packaging"
 	"pvz-cli/internal/usecase/service"
 	"pvz-cli/pkg/auth"
+	"pvz-cli/pkg/cache"
+	"pvz-cli/pkg/cache/lru"
 	"pvz-cli/pkg/closer"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/logger"
@@ -26,28 +44,19 @@ import (
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
 	"strings"
-
-	"github.com/gin-gonic/gin"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/jackc/pgx/v5/pgxpool"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
-	"golang.org/x/time/rate"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/reflection"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // Server позволяет удобно и аккуратно поднимать весь проект и его зависимости.
 type Server struct {
-	closer     *closer.Closer
-	grpcServer *grpc.Server
-	log        logger.Logger
-	cfg        *config.Config
-	hndl       handler.ReportsHandler
-	txMgr      txmanager.TxManager
-	wp         *wpool.Pool
+	closer        *closer.Closer
+	grpcServer    *grpc.Server
+	log           logger.Logger
+	cfg           *config.Config
+	hndl          handler.ReportsHandler
+	txMgr         txmanager.TxManager
+	wp            *wpool.Pool
+	metrics       *metrics.Metrics
+	metricsServer *http.Server
 }
 
 // NewServer создаёт новое приложение с инициализацией хранилища, бизнес-логики и REPL.
@@ -55,6 +64,13 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 	c := closer.NewCloser()
 
 	limiter := rate.NewLimiter(rate.Limit(5), 5)
+
+	tracerCleanup := initTracer(context.Background())
+	c.Add(func(ctx context.Context) error {
+		log.Infow("Shutting down tracer")
+		tracerCleanup()
+		return nil
+	})
 
 	masterPool, err := cfg.Storage.ConnectMaster(log)
 	if err != nil {
@@ -108,9 +124,11 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 
 	grpcSrv := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			otelgrpc.UnaryServerInterceptor(),
 			middleware.RateLimitInterceptor(limiter),
 			basic,
 		),
+		grpc.ChainStreamInterceptor(otelgrpc.StreamServerInterceptor()),
 	)
 	reflection.Register(grpcSrv)
 
@@ -173,7 +191,30 @@ func (s *Server) setupGRPC() {
 
 	strategyProvider := packaging.NewDefaultProvider()
 
-	svc := service.NewService(s.txMgr, orderRepo, hrRepo, outboxRepo, strategyProvider, s.wp)
+	cacheCfg := cache.Config[string]{
+		Capacity: s.cfg.OrderCache.Capacity,
+		TTL:      s.cfg.OrderCache.TTL,
+		Strategy: lru.NewLRUStrategy[string](s.cfg.OrderCache.Capacity),
+	}
+	orderCache := cache.New[string, *models.Order](cacheCfg)
+	s.closer.Add(func(_ context.Context) error {
+		orderCache.Close()
+		return nil
+	})
+
+	promReg := prometheus.DefaultRegisterer
+	appMetrics := metrics.New(promReg)
+	s.metrics = appMetrics
+
+	metricMux := http.NewServeMux()
+	metricMux.Handle(s.cfg.Metrics.Endpoint, promhttp.Handler())
+
+	s.metricsServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.cfg.Metrics.Port),
+		Handler: metricMux,
+	}
+
+	svc := service.NewService(s.txMgr, orderRepo, hrRepo, outboxRepo, strategyProvider, s.wp, orderCache, appMetrics)
 
 	hndl := handler.NewReportsHandler(svc)
 
@@ -184,6 +225,18 @@ func (s *Server) setupGRPC() {
 }
 
 func (s *Server) Run(ctx context.Context) error {
+	go func() {
+		s.log.Infow("Starting Metrics server", "addr", s.metricsServer.Addr)
+		if err := s.metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.log.Fatalw("Metrics server error", "error", err)
+		}
+	}()
+
+	s.closer.Add(func(ctx context.Context) error {
+		s.log.Infow("Shutting down Metrics server")
+		return s.metricsServer.Shutdown(ctx)
+	})
+
 	if err := s.runGRPC(ctx); err != nil {
 		return err
 	}
@@ -240,6 +293,8 @@ func (s *Server) runGateway(ctx context.Context) error {
 	conn, err := grpc.NewClient(
 		endpoint,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	)
 	if err != nil {
 		return errs.Wrap(err, errs.CodeInternalError, "failed to create gRPC client")
@@ -287,8 +342,11 @@ func (s *Server) runGateway(ctx context.Context) error {
 
 func (s *Server) setupRoutes(gw http.Handler) *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Logger(), gin.Recovery())
-
+	r.Use(
+		gin.Logger(), gin.Recovery(),
+		otelgin.Middleware("pvz-gateway"),
+		middleware.MetricMiddleware(s.metrics),
+	)
 	r.StaticFile(
 		"/swagger/spec/http/swagger.json",
 		"./api/swagger/apidocs.swagger.json",

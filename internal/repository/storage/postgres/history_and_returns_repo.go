@@ -2,6 +2,9 @@ package postgres
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/domain/vo"
 	"pvz-cli/pkg/errs"
@@ -102,6 +105,14 @@ func (r *HistoryAndReturnsPostgresRepo) History(
 }
 
 func (r *HistoryAndReturnsPostgresRepo) AddHistory(ctx context.Context, e *models.HistoryEvent) error {
+	ctx, span := otel.Tracer("repo.orders").Start(ctx, "HistoryRepo.AddHistory",
+		trace.WithAttributes(
+			attribute.String("order.id", e.OrderID),
+			attribute.String("order.status", string(e.Status)),
+		),
+	)
+	defer span.End()
+
 	exec := r.conn.GetExecutor(ctx)
 
 	if _, err := exec.Exec(ctx,

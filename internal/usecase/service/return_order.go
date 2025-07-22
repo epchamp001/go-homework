@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"pvz-cli/internal/domain/models"
+	"pvz-cli/internal/usecase"
 	"pvz-cli/pkg/errs"
 	"pvz-cli/pkg/txmanager"
 	"time"
@@ -14,18 +15,33 @@ func (s *ServiceImpl) ReturnOrder(ctx context.Context, orderID string) error {
 		return errs.New(errs.CodeValidationError, "empty order id")
 	}
 
+	var cached *models.Order
+
+	if o, ok := s.cache.Get(usecase.OrderKey(orderID)); ok {
+		cached = o
+		if err := validateReturn(o); err != nil {
+			return err
+		}
+	}
+
 	err := s.tx.WithTx(
 		ctx,
 		txmanager.IsolationLevelRepeatableRead,
 		txmanager.AccessModeReadWrite,
 		func(txCtx context.Context) error {
-			o, err := s.ordRepo.Get(txCtx, orderID)
-			if err != nil {
-				return errs.Wrap(err, errs.CodeRecordNotFound, "order not found", "order_id", orderID)
-			}
+			var o *models.Order
+			if cached != nil {
+				o = cached
+			} else {
+				var err error
+				o, err = s.ordRepo.Get(txCtx, orderID)
+				if err != nil {
+					return errs.Wrap(err, errs.CodeRecordNotFound, "order not found", "order_id", orderID)
+				}
 
-			if err := validateReturn(o); err != nil {
-				return err
+				if err := validateReturn(o); err != nil {
+					return err
+				}
 			}
 
 			now := time.Now()
@@ -72,6 +88,7 @@ func (s *ServiceImpl) ReturnOrder(ctx context.Context, orderID string) error {
 					"failed to enqueue return event", "order_id", orderID)
 			}
 
+			cached = o
 			return nil
 		},
 	)
@@ -79,5 +96,10 @@ func (s *ServiceImpl) ReturnOrder(ctx context.Context, orderID string) error {
 		return errs.Wrap(err, errs.CodeDBTransactionError, "return order tx failed", "order_id", orderID)
 	}
 
+	if cached != nil {
+		s.cache.Set(usecase.OrderKey(orderID), cached)
+	}
+
+	s.metrics.IncOrdersReturned()
 	return nil
 }
