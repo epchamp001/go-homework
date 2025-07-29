@@ -8,6 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,8 +26,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
-	"net"
-	"net/http"
 	"pvz-cli/internal/config"
 	"pvz-cli/internal/domain/models"
 	"pvz-cli/internal/handler"
@@ -43,7 +45,6 @@ import (
 	pvzpb "pvz-cli/pkg/pvz"
 	"pvz-cli/pkg/txmanager"
 	"pvz-cli/pkg/wpool"
-	"strings"
 )
 
 // Server позволяет удобно и аккуратно поднимать весь проект и его зависимости.
@@ -83,7 +84,7 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 		return nil
 	})
 
-	replPool1, err := cfg.Storage.ConnectReplica(1, log)
+	replPool1, err := cfg.Storage.ConnectReplica(0, log)
 	if err != nil {
 		log.Fatalw("connect to replica1 postgres",
 			"error", err)
