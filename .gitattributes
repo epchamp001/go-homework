@@ -7,3 +7,5 @@
 vendor-proto/** linguist-generated=true
 vendor-proto/** export-ignore
 vendor-proto/** -diff
+
+*.html linguist-documentation
